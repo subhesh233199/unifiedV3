@@ -404,10 +404,17 @@ GENERATED REPORT:
 {generated_report}
 
 INSTRUCTIONS:
-1. Provide a score from 0-100
-2. Give brief 2-3 sentence evaluation
-3. Use EXACTLY this format:
-Score: [0-100]
+1. For each category, give a score (integer) out of its maximum:
+    - Data accuracy: [0-50]
+    - Analysis depth: [0-30]
+    - Clarity: [0-20]
+2. Add up to a TOTAL out of 100.
+3. Give a brief 2-3 sentence evaluation.
+4. Use EXACTLY this format:
+Data accuracy: [0-50]
+Analysis depth: [0-30]
+Clarity: [0-20]
+TOTAL: [0-100]
 Evaluation: [your evaluation]
 
 Your evaluation:"""
