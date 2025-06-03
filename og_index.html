@@ -445,14 +445,36 @@
                 // Store the first visualization image for download
                 const firstVisualizationBase64 = response.data.visualizations.length > 0 ? response.data.visualizations[0] : null;
 
-                const evalContent = `
+                const evalData = response.data.evaluation;
+
+            // Backwards compatibility: If old format, show as before
+            if (typeof evalData.data_accuracy === 'undefined') {
+                // fallback: old format (score and text only)
+                var evalContent = `
                     <div class="evaluation-card">
                         <h4>Analysis Quality Score</h4>
-                        <div class="score-display">${response.data.evaluation.score}/100</div>
-                        <p>${response.data.evaluation.text}</p>
+                        <div class="score-display">${evalData.score || 0}/100</div>
+                        <p>${evalData.text || ''}</p>
                     </div>
                 `;
+            } else {
+                // new, detailed format
+                    var evalContent = `
+                        <div class="evaluation-card">
+                            <h4>Analysis Quality Breakdown</h4>
+                            <table class="table table-bordered" style="max-width:400px;">
+                                <tr><th>Criteria</th><th>Score</th><th>Max</th></tr>
+                                <tr><td>Data Accuracy</td><td>${evalData.data_accuracy}</td><td>50</td></tr>
+                                <tr><td>Analysis Depth</td><td>${evalData.analysis_depth}</td><td>30</td></tr>
+                                <tr><td>Clarity</td><td>${evalData.clarity}</td><td>20</td></tr>
+                                <tr style="font-weight:bold; background:#f1f1f9;"><td>Total</td><td>${evalData.total}</td><td>100</td></tr>
+                            </table>
+                            <p style="margin-top:1em;"><b>Judge's Notes:</b> ${evalData.text}</p>
+                        </div>
+                    `;
+                }
                 document.getElementById('evaluationContent').innerHTML = evalContent;
+
 
                 const hyperlinksContent = response.data.hyperlinks.map(link => `
                     <div class="hyperlink-card">
