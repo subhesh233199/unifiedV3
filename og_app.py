@@ -250,7 +250,58 @@ def store_cached_report(folder_path_hash: str, pdfs_hash: str, response: Analysi
         logger.info(f"Cached report for folder_path_hash: {folder_path_hash}")
     except Exception as e:
         logger.error(f"Error storing cached report: {str(e)}")
+def parse_markdown_table(table_text):
+    lines = [l for l in table_text.split('\n') if l.strip()]
+    if len(lines) < 2:
+        return []
+    headers = [h.strip() for h in lines[0].strip('|').split('|')]
+    rows = []
+    for line in lines[2:]:
+        if not line.strip():
+            continue
+        values = [v.strip() for v in line.strip('|').split('|')]
+        row = dict(zip(headers, values))
+        rows.append(row)
+    return rows
+def extract_metrics_from_markdown(markdown_text):
+    html_content = md.markdown(markdown_text)
+    soup = BeautifulSoup(html_content, "lxml")
+    metrics_summary = soup.find('h2', string=re.compile(r'Metrics Summary', re.I))
+    if not metrics_summary:
+        return {}
+    current = metrics_summary.find_next_sibling()
+    tables_with_headings = []
+    while current and current.name != "h2":
+        if current.name == "h3":
+            current_heading = current.get_text(strip=True)
+            table_p = current.find_next_sibling("p")
+            if table_p and re.search(r"\| ?Release ?\|", table_p.text):
+                table_text = table_p.text.strip()
+                tables_with_headings.append({
+                    "heading": current_heading,
+                    "table": table_text
+                })
+        current = current.find_next_sibling()
+    return tables_with_headings
+def build_metrics_dict_from_extracted(tables_with_headings):
+    metrics = {}
+    for entry in tables_with_headings:
+        heading = entry['heading']
+        rows = parse_markdown_table(entry['table'])
+        metrics[heading] = rows
+    return {"metrics": metrics}
 
+def save_markdown_to_cache(folder_path, markdown_text):
+    folder_path_hash = hash_string(folder_path)
+    conn = sqlite3.connect('cache.db')
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute('''
+        INSERT OR REPLACE INTO report_cache (folder_path_hash, pdfs_hash, report_json, created_at)
+        VALUES (?, '', ?, ?)
+    ''', (folder_path_hash, json.dumps({"report": markdown_text}), int(time.time())))
+    conn.commit()
+    conn.close()
 def cleanup_old_cache():
     try:
         current_time = int(time.time())
@@ -1684,13 +1735,17 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     )
 @app.post("/save_report")
 async def save_report(request: UpdateReportRequest):
-    # Example: just log or save for now
-    print(f"Received updated markdown for {request.folder_path}")
-    print(request.report[:200])  # Print first 200 chars for debug
+    # 1. Save user-edited markdown to cache
+    save_markdown_to_cache(request.folder_path, request.report)
 
-    # TODO: Call your processing function here!
-    # process_user_edited_report(request.report)
+    # 2. Extract metrics from the saved markdown
+    tables_with_headings = extract_metrics_from_markdown(request.report)
+    metrics_result = build_metrics_dict_from_extracted(tables_with_headings)
 
+    # 3. Generate visualizations based on the extracted metrics
+    run_fallback_visualization(metrics_result)
+
+    # 4. Optionally, return a success response
     return {"success": True}
 
 @app.post("/analyze", response_model=AnalysisResponse)
