@@ -1,55 +1,15 @@
-Traceback (most recent call last):
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__    
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\applications.py", line 112, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__        
-    raise exc
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__        
-    await self.app(scope, receive, _send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response   
-    await self.app(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__     
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app     
-    raise exc
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app     
-    await app(scope, receive, sender)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\routing.py", line 715, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\routing.py", line 735, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\routing.py", line 76, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app     
-    raise exc
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app     
-    await app(scope, receive, sender)
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\starlette\routing.py", line 73, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function       
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\app.py", line 1744, in save_report
-    tables_with_headings = extract_metrics_from_markdown(request.report)
-                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\app.py", line 270, in extract_metrics_from_markdown
-    soup = BeautifulSoup(html_content, "lxml")
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\AS9969\Desktop\Unified refactoring\langraph_unified\langchain_original_files\bbg\Lib\site-packages\bs4\__init__.py", line 364, in __init__
-    raise FeatureNotFound(
-bs4.exceptions.FeatureNotFound: Couldn't find a tree builder with the features you requested: lxml. Do you need to install a parser library?
+2025-06-03 18:14:14,153 - INFO - Report_crew and viz_crew completed
+2025-06-03 18:14:14,154 - INFO - Report_crew output: ```markdown
+# Software Metrics Report
+
+## Overview
+
+The release health across versions 25.1, 25.2, a...
+2025-06-03 18:14:14,154 - INFO - Viz_crew output: ```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Data for visualization
+releases = ["...
+2025-06-03 18:14:14,155 - ERROR - Report missing required sections
+2025-06-03 18:14:14,155 - ERROR - Error in /analyze endpoint: 500: Generated report is incomplete
