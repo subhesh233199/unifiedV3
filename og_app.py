@@ -1668,15 +1668,17 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
                     detail=f"Failed to generate minimum required visualizations: got {len(viz_base64)}, need at least {min_visualizations}"
                 )
 
-    score, evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
+    # **MAIN FIX: just these two lines changed below**
+    evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
 
     return AnalysisResponse(
         metrics=metrics,
         visualizations=viz_base64,
         report=enhanced_report,
-        evaluation={"score": score, "text": evaluation},
+        evaluation=evaluation,
         hyperlinks=all_hyperlinks
     )
+
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_pdfs(request: FolderPathRequest):
