@@ -432,7 +432,9 @@ def locate_table(text: str, start_header: str, end_header: str) -> str:
 #         return 50, "Could not parse evaluation"
 from typing import Tuple, Dict
 
-def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Dict[str, object]:
+import re
+
+def evaluate_with_llm_judge(source_text: str, generated_report: str) -> dict:
     judge_llm = AzureChatOpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -478,32 +480,39 @@ Your evaluation:"""
         response = judge_llm.invoke(prompt)
         response_text = response.content
 
-        def extract(label, default=0):
+        def extract_score(label, default=0):
+            """
+            Extracts the first integer after the colon in a line like:
+            Data accuracy: 35/50 or Data accuracy: 35
+            """
             for line in response_text.splitlines():
                 if line.strip().lower().startswith(label.lower()):
-                    try:
-                        return int(line.split(':')[1].strip().split()[0])
-                    except Exception:
-                        continue
+                    match = re.search(r':\s*(\d+)', line)
+                    if match:
+                        return int(match.group(1))
             return default
 
-        data_accuracy = extract("Data accuracy", 0)
-        analysis_depth = extract("Analysis depth", 0)
-        clarity = extract("Clarity", 0)
-        total = extract("TOTAL", data_accuracy + analysis_depth + clarity)
+        lines = response_text.splitlines()
+        data_accuracy = extract_score("Data accuracy", 0)
+        analysis_depth = extract_score("Analysis depth", 0)
+        clarity = extract_score("Clarity", 0)
+        total = extract_score("TOTAL", data_accuracy + analysis_depth + clarity)
 
         # Find evaluation text
         evaluation = ""
-        for line in response_text.splitlines():
+        for line in lines:
             if line.strip().lower().startswith("evaluation:"):
                 evaluation = line.split(":", 1)[1].strip()
                 break
 
-        # Fallback if evaluation was multiline
+        # Fallback if evaluation was multiline or missing
         if not evaluation:
-            lines = [line for line in response_text.splitlines() if not any(label in line.lower() for label in ["data accuracy", "analysis depth", "clarity", "total"])]
-            if lines:
-                evaluation = " ".join(lines)
+            eval_lines = [
+                line for line in lines
+                if not any(key in line.lower() for key in ["data accuracy", "analysis depth", "clarity", "total"])
+            ]
+            if eval_lines:
+                evaluation = " ".join(eval_lines)
 
         return {
             "data_accuracy": data_accuracy,
