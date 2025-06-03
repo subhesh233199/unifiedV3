@@ -433,7 +433,7 @@
 
                 // Show download buttons
                 document.getElementById('downloadHtmlBtn').style.display = 'inline-block';
-                document.getElementById('downloadPdfBtn'). style.display = 'inline-block';
+                document.getElementById('downloadPdfBtn').style.display = 'inline-block';
 
                 const vizContent = response.data.visualizations.map((base64, index) => 
                     `<div class="col-md-6 mb-4">
@@ -442,23 +442,20 @@
                 ).join('');
                 document.getElementById('visualizationsContent').innerHTML = vizContent;
 
-                // Store the first visualization image for download
-                const firstVisualizationBase64 = response.data.visualizations.length > 0 ? response.data.visualizations[0] : null;
-
                 const evalData = response.data.evaluation;
 
-            // Backwards compatibility: If old format, show as before
-            if (typeof evalData.data_accuracy === 'undefined') {
-                // fallback: old format (score and text only)
-                var evalContent = `
-                    <div class="evaluation-card">
-                        <h4>Analysis Quality Score</h4>
-                        <div class="score-display">${evalData.score || 0}/100</div>
-                        <p>${evalData.text || ''}</p>
-                    </div>
-                `;
-            } else {
-                // new, detailed format
+                // Backwards compatibility: If old format, show as before
+                if (typeof evalData.data_accuracy === 'undefined') {
+                    // fallback: old format (score and text only)
+                    var evalContent = `
+                        <div class="evaluation-card">
+                            <h4>Analysis Quality Score</h4>
+                            <div class="score-display">${evalData.score || 0}/100</div>
+                            <p>${evalData.text || ''}</p>
+                        </div>
+                    `;
+                } else {
+                    // new, detailed format
                     var evalContent = `
                         <div class="evaluation-card">
                             <h4>Analysis Quality Breakdown</h4>
@@ -474,7 +471,6 @@
                     `;
                 }
                 document.getElementById('evaluationContent').innerHTML = evalContent;
-
 
                 const hyperlinksContent = response.data.hyperlinks.map(link => `
                     <div class="hyperlink-card">
@@ -570,7 +566,7 @@
         th { background-color: #f2f2f2; }
         .table-responsive { overflow-x: auto; margin-bottom: 1rem; }
         .visualization { max-width: 100%; height: auto; margin: 15px 0; border: 1px solid #e0e0e0; padding: 15px; background: white; }
-        .status-high { color: #dc
+        .status-high { color: #dc3545; }
     </style>
 </head>
 <body>
@@ -618,7 +614,6 @@
         }
 
         downloadPdfBtn.addEventListener('click', downloadPdf);
-
     </script>
 </body>
 </html>
