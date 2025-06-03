@@ -514,7 +514,7 @@
             downloadPdfBtn.style.display = 'none';
         });
 
-        saveBtn.addEventListener('click', () => {
+        saveBtn.addEventListener('click', async () => {
             const editedMarkdown = markdownEditor.value;
             const validation = validateMarkdownContent(editedMarkdown);
             if (!validation.isValid) {
@@ -528,9 +528,22 @@
             editBtn.style.display = 'inline-block';
             saveBtn.style.display = 'none';
             cancelBtn.style.display = 'none';
-            downloadHtmlBtn.style.display = 'inline-block'; // Show download buttons after saving
+            downloadHtmlBtn.style.display = 'inline-block';
             downloadPdfBtn.style.display = 'inline-block';
+        
+            // --- NEW: Send to backend ---
+            try {
+                const folderPath = document.getElementById('folderPath').value;
+                const response = await axios.post('http://127.0.0.1:8080/save_report', {
+                    folder_path: folderPath,
+                    report: editedMarkdown
+                });
+                alert("Report saved and sent to backend successfully!");
+            } catch (err) {
+                alert("Failed to save report to backend: " + (err.response?.data?.detail || err.message));
+            }
         });
+
 
         cancelBtn.addEventListener('click', () => {
             markdownEditor.value = originalMarkdown;
