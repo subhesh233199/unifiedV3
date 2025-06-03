@@ -1,22 +1,23 @@
-from pdf2image import convert_from_path
+import fitz  # PyMuPDF
 import os
 
-# Path to your PDF file
-pdf_path = "your_file.pdf"   # <-- Change this to your PDF file path
-output_folder = "pdf_images" # Folder to save the images
-
-# Create output folder if it doesn't exist
+pdf_path = "your_file.pdf"
+output_folder = "pdf_images"
 os.makedirs(output_folder, exist_ok=True)
 
-# Set dpi for high quality. 300 is good for most uses.
-dpi = 300
+# Open the PDF
+doc = fitz.open(pdf_path)
 
-# Convert PDF to images
-pages = convert_from_path(pdf_path, dpi=dpi)
+# Set zoom for high quality (2.0 means 200%)
+zoom_x = 2.0
+zoom_y = 2.0
+matrix = fitz.Matrix(zoom_x, zoom_y)
 
-for i, page in enumerate(pages):
-    image_path = os.path.join(output_folder, f"page_{i+1}.png")
-    page.save(image_path, "PNG")
-    print(f"Saved: {image_path}")
+for page_num in range(len(doc)):
+    page = doc.load_page(page_num)  # 0-based indexing
+    pix = page.get_pixmap(matrix=matrix, alpha=False)
+    output_path = os.path.join(output_folder, f"page_{page_num+1}.png")
+    pix.save(output_path)
+    print(f"Saved: {output_path}")
 
-print(f"Converted {len(pages)} pages from '{pdf_path}' to images in '{output_folder}'")
+doc.close()
