@@ -1,0 +1,22 @@
+from pdf2image import convert_from_path
+import os
+
+# Path to your PDF file
+pdf_path = "your_file.pdf"   # <-- Change this to your PDF file path
+output_folder = "pdf_images" # Folder to save the images
+
+# Create output folder if it doesn't exist
+os.makedirs(output_folder, exist_ok=True)
+
+# Set dpi for high quality. 300 is good for most uses.
+dpi = 300
+
+# Convert PDF to images
+pages = convert_from_path(pdf_path, dpi=dpi)
+
+for i, page in enumerate(pages):
+    image_path = os.path.join(output_folder, f"page_{i+1}.png")
+    page.save(image_path, "PNG")
+    print(f"Saved: {image_path}")
+
+print(f"Converted {len(pages)} pages from '{pdf_path}' to images in '{output_folder}'")
