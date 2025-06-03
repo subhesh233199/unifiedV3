@@ -1605,10 +1605,33 @@ async def analyze_pdfs(request: FolderPathRequest):
 
         metrics_summary_markdown = metrics_to_markdown(metrics)
 
-        # Add metrics_summary to the response, regardless of object/dict
-        if hasattr(response, "copy"):  # Pydantic model
-            response = response.copy(update={"metrics_summary": metrics_summary_markdown})
+        # --- Remove metrics summary section from LLM report if accidentally included ---
+        # (just in case you have old reports with placeholder or heading)
+        report_text = (
+            getattr(response, "report", None)
+            if hasattr(response, "report")
+            else response.get("report", "") if isinstance(response, dict)
+            else ""
+        )
+        import re
+        # Remove section if present (conservative: remove heading + following placeholder line)
+        report_text_clean = re.sub(
+            r"(## Metrics Summary\s*\[?METRICS_SUMMARY_PLACEHOLDER\]?\s*)", 
+            "", 
+            report_text, 
+            flags=re.IGNORECASE
+        )
+        # Optionally remove blank lines left behind
+        report_text_clean = re.sub(r'\n{3,}', '\n\n', report_text_clean)
+
+        # Update the report field in the response
+        if hasattr(response, "copy"):
+            response = response.copy(update={
+                "report": report_text_clean,
+                "metrics_summary": metrics_summary_markdown,
+            })
         elif isinstance(response, dict):
+            response["report"] = report_text_clean
             response["metrics_summary"] = metrics_summary_markdown
 
         store_cached_report(folder_path_hash, pdfs_hash, response)
@@ -1619,6 +1642,7 @@ async def analyze_pdfs(request: FolderPathRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         plt.close('all')
+
 
 
 
