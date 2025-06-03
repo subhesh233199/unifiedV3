@@ -142,6 +142,71 @@ class SharedState:
         self.viz_lock = Lock()
 
 shared_state = SharedState()
+def metrics_to_markdown(metrics: Dict) -> str:
+    """
+    Generate a Metrics Summary markdown string from structured metrics JSON.
+    This guarantees the numbers are from code, not LLM hallucination!
+    """
+    if not metrics or 'metrics' not in metrics:
+        return "No metrics data available."
+
+    md = []
+    m = metrics['metrics']
+
+    # Helper for ATLS/BTLS tables
+    def table_atls_btls(metric, metric_label):
+        rows = []
+        for sub in ["ATLS", "BTLS"]:
+            if sub in m[metric]:
+                rows.append(f"#### {metric_label} ({sub})")
+                rows.append("| Release | Value | Trend | Status |")
+                rows.append("|---------|-------|-------|--------|")
+                for item in m[metric][sub]:
+                    rows.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+        return "\n".join(rows)
+
+    # Helper for flat metrics
+    def table_flat(metric, label):
+        rows = [f"#### {label}", "| Release | Value | Trend | Status |", "|---------|-------|-------|--------|"]
+        for item in m[metric]:
+            rows.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+        return "\n".join(rows)
+
+    # Customer Specific Testing (UAT)
+    if "Customer Specific Testing (UAT)" in m:
+        rows = ["### Customer Specific Testing (UAT)"]
+        for client in ["RBS", "Tesco", "Belk"]:
+            if client in m["Customer Specific Testing (UAT)"]:
+                rows.append(f"#### {client}")
+                rows.append("| Release | Pass Count | Fail Count | Pass Rate (%) | Trend | Status |")
+                rows.append("|---------|------------|------------|---------------|-------|--------|")
+                for item in m["Customer Specific Testing (UAT)"][client]:
+                    rows.append(f"| {item['version']} | {item['pass_count']} | {item['fail_count']} | {round(item.get('pass_rate', 0), 1)} | {item.get('trend','')} | {item['status']} |")
+        md.append("\n".join(rows))
+
+    # ATLS/BTLS metrics
+    for label in [
+        ("Open ALL RRR Defects", "Open ALL RRR Defects"),
+        ("Open Security Defects", "Open Security Defects"),
+        ("All Open Defects (T-1)", "All Open Defects (T-1)"),
+        ("All Security Open Defects", "All Security Open Defects"),
+        ("Load/Performance", "Load/Performance"),
+    ]:
+        if label[0] in m:
+            md.append(table_atls_btls(label[0], label[1]))
+
+    # Flat metrics
+    for label in [
+        ("E2E Test Coverage", "E2E Test Coverage"),
+        ("Automation Test Coverage", "Automation Test Coverage"),
+        ("Unit Test Coverage", "Unit Test Coverage"),
+        ("Defect Closure Rate", "Defect Closure Rate"),
+        ("Regression Issues", "Regression Issues"),
+    ]:
+        if label[0] in m:
+            md.append(table_flat(label[0], label[1]))
+
+    return "### Metrics Summary\n\n" + "\n\n".join(md)
 
 # SQLite database setup
 def init_cache_db():
@@ -1770,6 +1835,19 @@ async def analyze_pdfs(request: FolderPathRequest):
         logger.info(f"Cache miss for folder_path_hash: {folder_path_hash} or cache clear requested, running full analysis")
         response = await run_full_analysis(request)
 
+        # --- ADDITION: generate metrics summary from structured metrics dict ---
+        # response is an AnalysisResponse (Pydantic model or dict)
+        # Try both attribute (for model) and key (for dict) access for safety:
+        metrics = getattr(response, "metrics", None) or response.get("metrics", None)
+        metrics_summary_markdown = metrics_to_markdown(metrics)
+
+        # If AnalysisResponse is a Pydantic model, use .copy(update=...)
+        if hasattr(response, "copy"):
+            response = response.copy(update={"metrics_summary": metrics_summary_markdown})
+        else:
+            response["metrics_summary"] = metrics_summary_markdown
+        # --- END ADDITION ---
+
         store_cached_report(folder_path_hash, pdfs_hash, response)
         return response
 
@@ -1778,6 +1856,7 @@ async def analyze_pdfs(request: FolderPathRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         plt.close('all')
+
 
 
 app.mount("/visualizations", StaticFiles(directory="visualizations"), name="visualizations")
