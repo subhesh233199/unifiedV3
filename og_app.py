@@ -82,18 +82,19 @@ class FolderPathRequest(BaseModel):
     
     Attributes:
         folder_path (str): Path to the folder containing PDF reports
+        clear_cache (bool): Whether to clear the cache before analysis (default: False)
         
     Validators:
         validate_folder_path: Ensures folder path is not empty
     """
     folder_path: str
+    clear_cache: bool = False  # Added this line
 
     @validator('folder_path')
     def validate_folder_path(cls, v):
         if not v:
             raise ValueError('Folder path cannot be empty')
         return v
-
 class AnalysisResponse(BaseModel):
     """
     Pydantic model for analysis response.
