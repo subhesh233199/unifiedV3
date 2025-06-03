@@ -1,0 +1,206 @@
+```markdown
+# Software Metrics Report
+
+## Overview
+The release health across versions 25.1, 25.2, and 25.3 demonstrates a mix of stability, notable improvements, and areas requiring attention. While defect closure rates and automation test coverage showed consistent progress, certain metrics like open security defects and overall defect counts highlighted concerning trends. Customer-specific testing outcomes were largely positive, with significant improvements in pass rates for Tesco and Belk. However, E2E test coverage experienced a steady decline across all releases.
+
+### Analyzed Releases:
+- 25.1
+- 25.2
+- 25.3
+
+### Notable Metric Highlights:
+1. **Defect Closure Rate**: Improved from 53.2% in 25.1 to 65% in 25.2 (+22.2%), before slightly declining to 60.4% in 25.3 (-7.1%), maintaining an "ON TRACK" status overall.    
+2. **Open Security Defects (ATLS)**: A sharp increase was observed in 25.3, rising to 43 (+975.0%) from 4 in 25.2, signaling a critical area of concern.
+3. **Customer-Specific Testing (Tesco)**: Pass rates improved significantly from 76.7% in 25.1 to 100.0% in 25.3, marking a +23.3% increase over the analyzed releases.
+
+### Significant Deviations:
+- **E2E Test Coverage**: Declined consistently from 1114 in 25.1 to 449 in 25.3 (-59.7% overall), though it remained "ON TRACK."
+- **All Open Defects (ATLS)**: Increased steadily from 339 in 25.1 to 382 in 25.3 (+12.7%), maintaining a "RISK" status throughout.
+
+---
+
+## Metrics Summary
+
+### Delivery Against Requirements
+No specific data provided for this section.
+
+### Open ALL RRR Defects (ATLS)
+| Release | Count | Trend      | Status       |
+|---------|-------|------------|--------------|
+| 25.1    | 42    | →          | MEDIUM RISK  |
+| 25.2    | 21    | ↓ (50.0%)  | MEDIUM RISK  |
+| 25.3    | 24    | ↑ (14.3%)  | ON TRACK     |
+
+### Open ALL RRR Defects (BTLS)
+| Release | Count | Trend      | Status       |
+|---------|-------|------------|--------------|
+| 25.1    | 282   | →          | MEDIUM RISK  |
+| 25.2    | 53    | ↓ (81.2%)  | MEDIUM RISK  |
+| 25.3    | 29    | ↓ (45.3%)  | ON TRACK     |
+
+### Open Security Defects (ATLS)
+| Release | Count | Trend       | Status       |
+|---------|-------|-------------|--------------|
+| 25.1    | 9     | →           | MEDIUM RISK  |
+| 25.2    | 4     | ↓ (55.6%)   | MEDIUM RISK  |
+| 25.3    | 43    | ↑ (975.0%)  | RISK         |
+
+### Open Security Defects (BTLS)
+| Release | Count | Trend       | Status       |
+|---------|-------|-------------|--------------|
+| 25.1    | 21    | →           | MEDIUM RISK  |
+| 25.2    | 3     | ↓ (85.7%)   | MEDIUM RISK  |
+| 25.3    | 0     | ↓ (100.0%)  | ON TRACK     |
+
+### All Open Defects (T-1) (ATLS)
+| Release | Count | Trend      | Status |
+|---------|-------|------------|--------|
+| 25.1    | 339   | →          | RISK   |
+| 25.2    | 355   | ↑ (4.7%)   | RISK   |
+| 25.3    | 382   | ↑ (7.6%)   | RISK   |
+
+### All Open Defects (T-1) (BTLS)
+| Release | Count | Trend      | Status |
+|---------|-------|------------|--------|
+| 25.1    | 715   | →          | RISK   |
+| 25.2    | 681   | ↓ (4.8%)   | RISK   |
+| 25.3    | 689   | ↑ (1.2%)   | RISK   |
+
+### All Security Open Defects (ATLS)
+| Release | Count | Trend      | Status |
+|---------|-------|------------|--------|
+| 25.1    | 66    | →          | RISK   |
+| 25.2    | 65    | ↓ (1.5%)   | RISK   |
+| 25.3    | 103   | ↑ (58.5%)  | RISK   |
+
+### All Security Open Defects (BTLS)
+| Release | Count | Trend      | Status |
+|---------|-------|------------|--------|
+| 25.1    | 103   | →          | RISK   |
+| 25.2    | 109   | ↑ (5.8%)   | RISK   |
+| 25.3    | 70    | ↓ (35.8%)  | RISK   |
+
+### Customer Specific Testing (UAT)
+
+#### RBS
+| Release | Pass Count | Fail Count | Pass Rate (%) | Trend      | Status       |
+|---------|------------|------------|---------------|------------|--------------|
+| 25.1    | 475        | 13         | 97.3          | →          | ON TRACK     |
+| 25.2    | 474        | 14         | 97.1          | ↓ (0.2%)   | MEDIUM RISK  |
+| 25.3    | 479        | 9          | 98.2          | ↑ (1.1%)   | ON TRACK     |
+
+#### Tesco
+| Release | Pass Count | Fail Count | Pass Rate (%) | Trend      | Status       |
+|---------|------------|------------|---------------|------------|--------------|
+| 25.1    | 46         | 14         | 76.7          | →          | MEDIUM RISK  |
+| 25.2    | 55         | 5          | 91.7          | ↑ (15.0%)  | ON TRACK     |
+| 25.3    | 60         | 0          | 100.0         | ↑ (8.3%)   | ON TRACK     |
+
+#### Belk
+| Release | Pass Count | Fail Count | Pass Rate (%) | Trend      | Status       |
+|---------|------------|------------|---------------|------------|--------------|
+| 25.1    | 42         | 1          | 97.7          | →          | ON TRACK     |
+| 25.2    | 38         | 5          | 88.4          | ↓ (9.3%)   | MEDIUM RISK  |
+| 25.3    | 43         | 0          | 100.0         | ↑ (11.6%)  | ON TRACK     |
+
+### Load/Performance
+
+#### ATLS
+| Release | Count | Trend      | Status       |
+|---------|-------|------------|--------------|
+| 25.1    | 5     | →          | MEDIUM RISK  |
+| 25.2    | 2     | ↓ (60.0%)  | MEDIUM RISK  |
+| 25.3    | 2     | →          | RISK         |
+
+#### BTLS
+| Release | Count | Trend      | Status       |
+|---------|-------|------------|--------------|
+| 25.1    | 11    | →          | MEDIUM RISK  |
+| 25.2    | 1     | ↓ (90.9%)  | MEDIUM RISK  |
+| 25.3    | 1     | →          | RISK         |
+
+### E2E Test Coverage
+| Release | Count | Trend      | Status       |
+|---------|-------|------------|--------------|
+| 25.1    | 1114  | →          | ON TRACK     |
+| 25.2    | 681   | ↓ (38.9%)  | ON TRACK     |
+| 25.3    | 449   | ↓ (34.1%)  | ON TRACK     |
+
+### Automation Test Coverage
+| Release | Count | Trend      | Status       |
+|---------|-------|------------|--------------|
+| 25.1    | 922   | →          | ON TRACK     |
+| 25.2    | 991   | ↑ (7.5%)   | ON TRACK     |
+| 25.3    | 1042  | ↑ (5.1%)   | ON TRACK     |
+
+### Unit Test Coverage
+| Release | Count | Trend      | Status |
+|---------|-------|------------|--------|
+| 25.1    | 5     | →          | WIP    |
+| 25.2    | 5     | →          | WIP    |
+| 25.3    | 5     | →          | WIP    |
+
+### Defect Closure Rate (ATLS)
+| Release | Rate (%) | Trend      | Status       |
+|---------|----------|------------|--------------|
+| 25.1    | 53.2     | →          | MEDIUM RISK  |
+| 25.2    | 65.0     | ↑ (22.2%)  | MEDIUM RISK  |
+| 25.3    | 60.4     | ↓ (7.1%)   | ON TRACK     |
+
+### Regression Issues
+| Release | Count | Trend | Status  |
+|---------|-------|-------|---------|
+| 25.2    | 2     | →     | CLOSED  |
+| 25.3    | 2     | →     | CLOSED  |
+
+---
+
+## Key Findings
+
+1. **First finding**
+   The number of open RRR defects in ATLS showed a significant improvement from version 25.1 (42 defects, medium risk) to 25.2 (21 defects, medium risk, ↓ 50.0%), but slightly increased in 25.3 (24 defects, on track, ↑ 14.3%). Similarly, BTLS experienced a dramatic reduction from 282 defects in 25.1 to 53 in 25.2 (↓ 81.2%) and further to 29 in 25.3 (↓ 45.3%), indicating consistent progress in defect management.
+
+2. **Second finding**
+   Automation test coverage demonstrated steady growth across versions, increasing from 922 in 25.1 to 991 in 25.2 (↑ 7.5%) and further to 1042 in 25.3 (↑ 5.1%). This upward trend reflects a strong focus on improving automated testing processes, which is critical for maintaining software quality.
+
+3. **Third finding**
+   Security-related metrics revealed a concerning spike in open security defects for ATLS in version 25.3, rising from 4 in 25.2 to 43 (↑ 975.0%), shifting the status to "risk." Conversely, BTLS showed significant improvement, reducing open security defects from 3 in 25.2 to 0 in 25.3 (↓ 100.0%), achieving an "on track" status.
+
+4. **Fourth finding**
+   Testing coverage trends showed mixed results. E2E test coverage declined significantly from 1114 in 25.1 to 681 in 25.2 (↓ 38.9%) and further to 449 in 25.3 (↓ 34.1%). However, automation test coverage consistently improved, and unit test coverage remained stable at 5 across all versions, indicating a need to balance efforts across different testing layers.
+
+5. **Fifth finding**
+   An unexpected anomaly was observed in the regression issues metric, which remained constant at 2 across versions 25.2 and 25.3, despite other defect metrics showing significant fluctuations. This stability suggests effective regression management but warrants further investigation to ensure alignment with overall defect trends.
+
+6. **Sixth finding**
+   Load and performance metrics for both ATLS and BTLS showed no improvement in version 25.3, with values remaining constant at 2 and 1, respectively, compared to 25.2. This stagnation, coupled with the "risk" status, highlights a critical area requiring immediate attention to ensure system reliability under load.
+
+7. **Seventh finding**
+   Defect closure rate improved significantly from 53.2% in 25.1 to 65% in 25.2 (↑ 22.2%) but slightly declined to 60.4% in 25.3 (↓ 7.1%). Despite the minor drop, the overall trend indicates effective defect management, with the status improving to "on track" in the latest version.
+
+---
+
+## Recommendations
+
+1. **Defect Reduction**
+   Focus on reducing the number of open defects, particularly in the "All Open Defects (T-1)" category, which shows a concerning upward trend for both ATLS (7.6% increase in version 25.3) and BTLS (1.2% increase in version 25.3). Target a 10% reduction in open defects by version 25.4 through stricter defect triaging and prioritization.
+
+2. **Security Improvements**
+   Address the spike in "Open Security Defects" for ATLS, which increased by 975% in version 25.3. Implement a dedicated security patch release by version 25.4 to bring the defect count below 20. For BTLS, maintain the current progress (100% reduction in version 25.3) by ensuring no new security defects are introduced.
+
+3. **Testing Coverage Enhancements**
+   Improve "E2E Test Coverage," which has declined significantly (38.9% in version 25.2 and 34.1% in version 25.3). Aim to restore coverage to at least 800 test cases by version 25.4. Additionally, increase "Unit Test Coverage," which has stagnated at 5 tests across all versions, by adding at least 10 new unit tests per release cycle.
+
+4. **Defect Management Process Changes**
+   Enhance the defect closure rate, which dropped from 65% in version 25.2 to 60.4% in version 25.3. Introduce weekly defect triage meetings and enforce stricter timelines for defect resolution to achieve a closure rate of 70% by version 25.4.
+
+5. **Performance Optimization**
+   Address the "Load/Performance" issues, particularly for ATLS and BTLS, which remain at a "RISK" status in version 25.3. Conduct a performance tuning sprint to reduce the number of performance-related defects to zero by version 25.4.
+
+6. **Risk Mitigation Strategies**
+   Mitigate risks in "All Security Open Defects," which increased by 58.5% for ATLS in version 25.3. Introduce a pre-release security audit process and aim to reduce the defect count to below 50 by version 25.4. For BTLS, continue the downward trend (35.8% reduction in version 25.3) by maintaining rigorous security testing.
+
+7. **Monitoring Improvements**
+   Enhance monitoring of customer-specific testing, particularly for Tesco and Belk, where pass rates improved to 100% in version 25.3. Implement automated monitoring tools to ensure these high pass rates are sustained in future releases. Additionally, focus on maintaining the upward trend in RBS pass rates (98.2% in version 25.3) by addressing any emerging issues proactively.
+```
