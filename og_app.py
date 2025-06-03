@@ -1652,7 +1652,6 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     # Extract versions from PDF filenames
     versions = []
     for pdf_path in pdf_files:
-        # New pattern to match "Workcloud Task Management XX.XX" format
         match = re.search(r'(\d+\.\d+)(?:\s|\.)', os.path.basename(pdf_path))
         if match:
             versions.append(match.group(1))
@@ -1734,7 +1733,10 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
 
     metrics = shared_state.metrics
 
-    # Get report from assemble_report_task
+    # NEW: Metrics summary from extracted metrics
+    metrics_summary = metrics_to_markdown(metrics)
+
+    # Get report from assemble_report_task (should be LLM analysis only, no tables)
     enhanced_report = enhance_report_markdown(report_crew.tasks[-1].output.raw)
     if not validate_report(enhanced_report):
         logger.error("Report missing required sections")
@@ -1790,16 +1792,18 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
                     detail=f"Failed to generate minimum required visualizations: got {len(viz_base64)}, need at least {min_visualizations}"
                 )
 
-    # **MAIN FIX: just these two lines changed below**
-    evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
+    # Evaluation uses metrics and report for LLM judgment
+    evaluation = evaluate_with_llm_judge(metrics, full_source_text, enhanced_report)
 
     return AnalysisResponse(
         metrics=metrics,
         visualizations=viz_base64,
         report=enhanced_report,
         evaluation=evaluation,
-        hyperlinks=all_hyperlinks
+        hyperlinks=all_hyperlinks,
+        metrics_summary=metrics_summary   # <-- Added!
     )
+
 @app.post("/save_report")
 async def save_report(request: UpdateReportRequest):
     # 1. Save user-edited markdown to cache
