@@ -377,7 +377,62 @@ def locate_table(text: str, start_header: str, end_header: str) -> str:
         raise ValueError(f"No metrics table data found between headers")
     return table_text
 
-def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Tuple[int, str]:
+# def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Tuple[int, str]:
+#     judge_llm = AzureChatOpenAI(
+#         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+#         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+#         api_version=os.getenv("AZURE_API_VERSION"),
+#         azure_deployment=os.getenv("DEPLOYMENT_NAME"),
+#         temperature=0,
+#         max_tokens=512,
+#         timeout=None,
+#     )
+   
+#     prompt = f"""Act as an impartial judge evaluating report quality. You will be given:
+# 1. ORIGINAL SOURCE TEXT (extracted from PDF)
+# 2. GENERATED REPORT (created by AI)
+
+# Evaluate based on:
+# - Data accuracy (50% weight): Does the report correctly reflect the source data?
+# - Analysis depth (30% weight): Does it provide meaningful insights?
+# - Clarity (20% weight): Is the presentation clear and professional?
+
+# ORIGINAL SOURCE:
+# {source_text}
+
+# GENERATED REPORT:
+# {generated_report}
+
+# INSTRUCTIONS:
+# 1. For each category, give a score (integer) out of its maximum:
+#     - Data accuracy: [0-50]
+#     - Analysis depth: [0-30]
+#     - Clarity: [0-20]
+# 2. Add up to a TOTAL out of 100.
+# 3. Give a brief 2-3 sentence evaluation.
+# 4. Use EXACTLY this format:
+# Data accuracy: [0-50]
+# Analysis depth: [0-30]
+# Clarity: [0-20]
+# TOTAL: [0-100]
+# Evaluation: [your evaluation]
+
+# Your evaluation:"""
+   
+#     try:
+#         response = judge_llm.invoke(prompt)
+#         response_text = response.content
+#         score_line = next(line for line in response_text.split('\n') if line.startswith('Score:'))
+#         score = int(score_line.split(':')[1].strip())
+#         eval_lines = [line for line in response_text.split('\n') if line.startswith('Evaluation:')]
+#         evaluation = ' '.join(line.split('Evaluation:')[1].strip() for line in eval_lines)
+#         return score, evaluation
+#     except Exception as e:
+#         logger.error(f"Error parsing judge response: {e}\nResponse was:\n{response_text}")
+#         return 50, "Could not parse evaluation"
+from typing import Tuple, Dict
+
+def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Dict[str, object]:
     judge_llm = AzureChatOpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -422,14 +477,51 @@ Your evaluation:"""
     try:
         response = judge_llm.invoke(prompt)
         response_text = response.content
-        score_line = next(line for line in response_text.split('\n') if line.startswith('Score:'))
-        score = int(score_line.split(':')[1].strip())
-        eval_lines = [line for line in response_text.split('\n') if line.startswith('Evaluation:')]
-        evaluation = ' '.join(line.split('Evaluation:')[1].strip() for line in eval_lines)
-        return score, evaluation
+
+        def extract(label, default=0):
+            for line in response_text.splitlines():
+                if line.strip().lower().startswith(label.lower()):
+                    try:
+                        return int(line.split(':')[1].strip().split()[0])
+                    except Exception:
+                        continue
+            return default
+
+        data_accuracy = extract("Data accuracy", 0)
+        analysis_depth = extract("Analysis depth", 0)
+        clarity = extract("Clarity", 0)
+        total = extract("TOTAL", data_accuracy + analysis_depth + clarity)
+
+        # Find evaluation text
+        evaluation = ""
+        for line in response_text.splitlines():
+            if line.strip().lower().startswith("evaluation:"):
+                evaluation = line.split(":", 1)[1].strip()
+                break
+
+        # Fallback if evaluation was multiline
+        if not evaluation:
+            lines = [line for line in response_text.splitlines() if not any(label in line.lower() for label in ["data accuracy", "analysis depth", "clarity", "total"])]
+            if lines:
+                evaluation = " ".join(lines)
+
+        return {
+            "data_accuracy": data_accuracy,
+            "analysis_depth": analysis_depth,
+            "clarity": clarity,
+            "total": total,
+            "text": evaluation
+        }
     except Exception as e:
-        logger.error(f"Error parsing judge response: {e}\nResponse was:\n{response_text}")
-        return 50, "Could not parse evaluation"
+        logger.error(f"Error parsing judge response: {e}\nResponse was:\n{locals().get('response_text', '')}")
+        # Return a sensible default for frontend to display
+        return {
+            "data_accuracy": 0,
+            "analysis_depth": 0,
+            "clarity": 0,
+            "total": 0,
+            "text": "Could not parse evaluation"
+        }
 
 def validate_report(report: str) -> bool:
     required_sections = ["# Software Metrics Report", "## Overview", "## Metrics Summary", "## Key Findings", "## Recommendations"]
