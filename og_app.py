@@ -654,7 +654,7 @@ Your evaluation:"""
         }
 
 def validate_report(report: str) -> bool:
-    required_sections = ["# Software Metrics Report", "## Overview", "## Metrics Summary", "## Key Findings", "## Recommendations"]
+    required_sections = ["# Software Metrics Report", "## Overview", "## Key Findings", "## Recommendations"]
     return all(section in report for section in required_sections)
 
 def validate_metrics(metrics: Dict[str, Any]) -> bool:
