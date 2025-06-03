@@ -105,12 +105,14 @@ class AnalysisResponse(BaseModel):
         report (str): Generated markdown report
         evaluation (Dict): Quality evaluation of the analysis
         hyperlinks (List[Dict]): Extracted hyperlinks from PDFs
+        metrics_summary: str   
     """
     metrics: Dict
     visualizations: List[str]
     report: str
     evaluation: Dict
     hyperlinks: List[Dict]
+    metrics_summary: str   # <-- ADD THIS LINE
 
 class MetricItem(BaseModel):
     version: str
@@ -1835,18 +1837,22 @@ async def analyze_pdfs(request: FolderPathRequest):
         logger.info(f"Cache miss for folder_path_hash: {folder_path_hash} or cache clear requested, running full analysis")
         response = await run_full_analysis(request)
 
-        # --- ADDITION: generate metrics summary from structured metrics dict ---
-        # response is an AnalysisResponse (Pydantic model or dict)
-        # Try both attribute (for model) and key (for dict) access for safety:
-        metrics = getattr(response, "metrics", None) or response.get("metrics", None)
+        # --- Generate metrics summary from structured metrics dict ---
+        # Support for both Pydantic model and dict return types:
+        if hasattr(response, "metrics"):
+            metrics = response.metrics
+        elif isinstance(response, dict):
+            metrics = response.get("metrics", None)
+        else:
+            metrics = None
+
         metrics_summary_markdown = metrics_to_markdown(metrics)
 
-        # If AnalysisResponse is a Pydantic model, use .copy(update=...)
-        if hasattr(response, "copy"):
+        # Add metrics_summary to the response, regardless of object/dict
+        if hasattr(response, "copy"):  # Pydantic model
             response = response.copy(update={"metrics_summary": metrics_summary_markdown})
-        else:
+        elif isinstance(response, dict):
             response["metrics_summary"] = metrics_summary_markdown
-        # --- END ADDITION ---
 
         store_cached_report(folder_path_hash, pdfs_hash, response)
         return response
