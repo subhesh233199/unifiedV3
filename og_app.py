@@ -434,6 +434,8 @@ from typing import Tuple, Dict
 
 import re
 
+import re
+
 def evaluate_with_llm_judge(source_text: str, generated_report: str) -> dict:
     judge_llm = AzureChatOpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
@@ -475,44 +477,42 @@ TOTAL: [0-100]
 Evaluation: [your evaluation]
 
 Your evaluation:"""
-   
+
     try:
         response = judge_llm.invoke(prompt)
         response_text = response.content
 
+        # Robust extraction: matches label anywhere on line, any case, extra spaces, "35/50" or "35"
         def extract_score(label, default=0):
-            """
-            Extracts the first integer after the colon in a line like:
-            Data accuracy: 35/50 or Data accuracy: 35
-            """
+            regex = re.compile(rf"{label}\s*:\s*(\d+)", re.IGNORECASE)
             for line in response_text.splitlines():
-                if line.strip().lower().startswith(label.lower()):
-                    match = re.search(r':\s*(\d+)', line)
-                    if match:
-                        return int(match.group(1))
+                match = regex.search(line)
+                if match:
+                    return int(match.group(1))
             return default
 
-        lines = response_text.splitlines()
         data_accuracy = extract_score("Data accuracy", 0)
         analysis_depth = extract_score("Analysis depth", 0)
         clarity = extract_score("Clarity", 0)
         total = extract_score("TOTAL", data_accuracy + analysis_depth + clarity)
 
-        # Find evaluation text
+        # Extract evaluation: combine lines after "Evaluation:" or the last non-score line
         evaluation = ""
-        for line in lines:
-            if line.strip().lower().startswith("evaluation:"):
-                evaluation = line.split(":", 1)[1].strip()
+        eval_regex = re.compile(r"evaluation\s*:\s*(.*)", re.IGNORECASE)
+        found_eval = False
+        for line in response_text.splitlines():
+            match = eval_regex.match(line)
+            if match:
+                evaluation = match.group(1).strip()
+                found_eval = True
                 break
-
-        # Fallback if evaluation was multiline or missing
-        if not evaluation:
-            eval_lines = [
-                line for line in lines
-                if not any(key in line.lower() for key in ["data accuracy", "analysis depth", "clarity", "total"])
+        # If not found, fallback: concatenate all lines not containing a score label
+        if not found_eval:
+            non_score_lines = [
+                l for l in response_text.splitlines()
+                if not any(lbl in l.lower() for lbl in ["data accuracy", "analysis depth", "clarity", "total"])
             ]
-            if eval_lines:
-                evaluation = " ".join(eval_lines)
+            evaluation = " ".join(non_score_lines).strip()
 
         return {
             "data_accuracy": data_accuracy,
@@ -523,7 +523,6 @@ Your evaluation:"""
         }
     except Exception as e:
         logger.error(f"Error parsing judge response: {e}\nResponse was:\n{locals().get('response_text', '')}")
-        # Return a sensible default for frontend to display
         return {
             "data_accuracy": 0,
             "analysis_depth": 0,
