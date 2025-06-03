@@ -1574,7 +1574,8 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_pdfs(request: FolderPathRequest):
     try:
-        cleanup_old_cache()
+        if request.clear_cache:
+            cleanup_old_cache()
 
         folder_path = convert_windows_path(request.folder_path)
         folder_path = os.path.normpath(folder_path)
@@ -1583,12 +1584,13 @@ async def analyze_pdfs(request: FolderPathRequest):
         pdfs_hash = hash_pdf_contents(pdf_files)
         logger.info(f"Computed hashes - folder_path_hash: {folder_path_hash}, pdfs_hash: {pdfs_hash}")
 
-        cached_response = get_cached_report(folder_path_hash, pdfs_hash)
-        if cached_response:
-            logger.info(f"Cache hit for folder_path_hash: {folder_path_hash}")
-            return cached_response
+        if not request.clear_cache:
+            cached_response = get_cached_report(folder_path_hash, pdfs_hash)
+            if cached_response:
+                logger.info(f"Cache hit for folder_path_hash: {folder_path_hash}")
+                return cached_response
 
-        logger.info(f"Cache miss for folder_path_hash: {folder_path_hash}, running full analysis")
+        logger.info(f"Cache miss for folder_path_hash: {folder_path_hash} or cache clear requested, running full analysis")
         response = await run_full_analysis(request)
 
         store_cached_report(folder_path_hash, pdfs_hash, response)
@@ -1599,6 +1601,7 @@ async def analyze_pdfs(request: FolderPathRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         plt.close('all')
+
 
 app.mount("/visualizations", StaticFiles(directory="visualizations"), name="visualizations")
 
