@@ -958,8 +958,6 @@ Only output this section.""",
         expected_output="Detailed markdown for Overview section"
     )
 
-    # REMOVED metrics_summary_task
-
     key_findings_task = Task(
         description=f"""Generate ONLY this Markdown section:
 ## Key Findings
@@ -1001,11 +999,6 @@ Each recommendation should be specific, measurable, and tied to the findings."""
 
 ---
 
-## Metrics Summary
-[METRICS_SUMMARY_PLACEHOLDER]
-
----
-
 ## Key Findings
 [Insert from Key Findings Task]
 
@@ -1018,7 +1011,6 @@ Do NOT alter content. Just combine with correct formatting.""",
         agent=reporter,
         context=[
             overview_task,
-            # metrics_summary_task,  # <--- REMOVED, will inject real table at render time
             key_findings_task,
             recommendations_task
         ],
