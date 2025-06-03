@@ -118,6 +118,10 @@ class MetricItem(BaseModel):
     status: str
     trend: Union[str, None] = None
 
+class UpdateReportRequest(BaseModel):
+    folder_path: str
+    report: str
+    
 # Shared state for thread-safe data sharing
 class SharedState:
     """
@@ -1678,7 +1682,16 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         evaluation=evaluation,
         hyperlinks=all_hyperlinks
     )
+@app.post("/save_report")
+async def save_report(request: UpdateReportRequest):
+    # Example: just log or save for now
+    print(f"Received updated markdown for {request.folder_path}")
+    print(request.report[:200])  # Print first 200 chars for debug
 
+    # TODO: Call your processing function here!
+    # process_user_edited_report(request.report)
+
+    return {"success": True}
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_pdfs(request: FolderPathRequest):
