@@ -28,7 +28,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from tenacity import retry, stop_after_attempt, wait_fixed
 from copy import deepcopy
-import markdown as md 
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -105,14 +105,12 @@ class AnalysisResponse(BaseModel):
         report (str): Generated markdown report
         evaluation (Dict): Quality evaluation of the analysis
         hyperlinks (List[Dict]): Extracted hyperlinks from PDFs
-        metrics_summary: str   
     """
     metrics: Dict
     visualizations: List[str]
     report: str
     evaluation: Dict
     hyperlinks: List[Dict]
-    metrics_summary: str   # <-- ADD THIS LINE
 
 class MetricItem(BaseModel):
     version: str
@@ -120,10 +118,6 @@ class MetricItem(BaseModel):
     status: str
     trend: Union[str, None] = None
 
-class UpdateReportRequest(BaseModel):
-    folder_path: str
-    report: str
-    
 # Shared state for thread-safe data sharing
 class SharedState:
     """
@@ -144,71 +138,6 @@ class SharedState:
         self.viz_lock = Lock()
 
 shared_state = SharedState()
-def metrics_to_markdown(metrics: Dict) -> str:
-    """
-    Generate a Metrics Summary markdown string from structured metrics JSON.
-    This guarantees the numbers are from code, not LLM hallucination!
-    """
-    if not metrics or 'metrics' not in metrics:
-        return "No metrics data available."
-
-    md = []
-    m = metrics['metrics']
-
-    # Helper for ATLS/BTLS tables
-    def table_atls_btls(metric, metric_label):
-        rows = []
-        for sub in ["ATLS", "BTLS"]:
-            if sub in m[metric]:
-                rows.append(f"#### {metric_label} ({sub})")
-                rows.append("| Release | Value | Trend | Status |")
-                rows.append("|---------|-------|-------|--------|")
-                for item in m[metric][sub]:
-                    rows.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-        return "\n".join(rows)
-
-    # Helper for flat metrics
-    def table_flat(metric, label):
-        rows = [f"#### {label}", "| Release | Value | Trend | Status |", "|---------|-------|-------|--------|"]
-        for item in m[metric]:
-            rows.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-        return "\n".join(rows)
-
-    # Customer Specific Testing (UAT)
-    if "Customer Specific Testing (UAT)" in m:
-        rows = ["### Customer Specific Testing (UAT)"]
-        for client in ["RBS", "Tesco", "Belk"]:
-            if client in m["Customer Specific Testing (UAT)"]:
-                rows.append(f"#### {client}")
-                rows.append("| Release | Pass Count | Fail Count | Pass Rate (%) | Trend | Status |")
-                rows.append("|---------|------------|------------|---------------|-------|--------|")
-                for item in m["Customer Specific Testing (UAT)"][client]:
-                    rows.append(f"| {item['version']} | {item['pass_count']} | {item['fail_count']} | {round(item.get('pass_rate', 0), 1)} | {item.get('trend','')} | {item['status']} |")
-        md.append("\n".join(rows))
-
-    # ATLS/BTLS metrics
-    for label in [
-        ("Open ALL RRR Defects", "Open ALL RRR Defects"),
-        ("Open Security Defects", "Open Security Defects"),
-        ("All Open Defects (T-1)", "All Open Defects (T-1)"),
-        ("All Security Open Defects", "All Security Open Defects"),
-        ("Load/Performance", "Load/Performance"),
-    ]:
-        if label[0] in m:
-            md.append(table_atls_btls(label[0], label[1]))
-
-    # Flat metrics
-    for label in [
-        ("E2E Test Coverage", "E2E Test Coverage"),
-        ("Automation Test Coverage", "Automation Test Coverage"),
-        ("Unit Test Coverage", "Unit Test Coverage"),
-        ("Defect Closure Rate", "Defect Closure Rate"),
-        ("Regression Issues", "Regression Issues"),
-    ]:
-        if label[0] in m:
-            md.append(table_flat(label[0], label[1]))
-
-    return "### Metrics Summary\n\n" + "\n\n".join(md)
 
 # SQLite database setup
 def init_cache_db():
@@ -317,58 +246,7 @@ def store_cached_report(folder_path_hash: str, pdfs_hash: str, response: Analysi
         logger.info(f"Cached report for folder_path_hash: {folder_path_hash}")
     except Exception as e:
         logger.error(f"Error storing cached report: {str(e)}")
-def parse_markdown_table(table_text):
-    lines = [l for l in table_text.split('\n') if l.strip()]
-    if len(lines) < 2:
-        return []
-    headers = [h.strip() for h in lines[0].strip('|').split('|')]
-    rows = []
-    for line in lines[2:]:
-        if not line.strip():
-            continue
-        values = [v.strip() for v in line.strip('|').split('|')]
-        row = dict(zip(headers, values))
-        rows.append(row)
-    return rows
-def extract_metrics_from_markdown(markdown_text):
-    html_content = md.markdown(markdown_text)
-    soup = BeautifulSoup(html_content, "lxml")
-    metrics_summary = soup.find('h2', string=re.compile(r'Metrics Summary', re.I))
-    if not metrics_summary:
-        return {}
-    current = metrics_summary.find_next_sibling()
-    tables_with_headings = []
-    while current and current.name != "h2":
-        if current.name == "h3":
-            current_heading = current.get_text(strip=True)
-            table_p = current.find_next_sibling("p")
-            if table_p and re.search(r"\| ?Release ?\|", table_p.text):
-                table_text = table_p.text.strip()
-                tables_with_headings.append({
-                    "heading": current_heading,
-                    "table": table_text
-                })
-        current = current.find_next_sibling()
-    return tables_with_headings
-def build_metrics_dict_from_extracted(tables_with_headings):
-    metrics = {}
-    for entry in tables_with_headings:
-        heading = entry['heading']
-        rows = parse_markdown_table(entry['table'])
-        metrics[heading] = rows
-    return {"metrics": metrics}
 
-def save_markdown_to_cache(folder_path, markdown_text):
-    folder_path_hash = hash_string(folder_path)
-    conn = sqlite3.connect('cache.db')
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute('''
-        INSERT OR REPLACE INTO report_cache (folder_path_hash, pdfs_hash, report_json, created_at)
-        VALUES (?, '', ?, ?)
-    ''', (folder_path_hash, json.dumps({"report": markdown_text}), int(time.time())))
-    conn.commit()
-    conn.close()
 def cleanup_old_cache():
     try:
         current_time = int(time.time())
@@ -499,6 +377,65 @@ def locate_table(text: str, start_header: str, end_header: str) -> str:
         raise ValueError(f"No metrics table data found between headers")
     return table_text
 
+# def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Tuple[int, str]:
+#     judge_llm = AzureChatOpenAI(
+#         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+#         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+#         api_version=os.getenv("AZURE_API_VERSION"),
+#         azure_deployment=os.getenv("DEPLOYMENT_NAME"),
+#         temperature=0,
+#         max_tokens=512,
+#         timeout=None,
+#     )
+   
+#     prompt = f"""Act as an impartial judge evaluating report quality. You will be given:
+# 1. ORIGINAL SOURCE TEXT (extracted from PDF)
+# 2. GENERATED REPORT (created by AI)
+
+# Evaluate based on:
+# - Data accuracy (50% weight): Does the report correctly reflect the source data?
+# - Analysis depth (30% weight): Does it provide meaningful insights?
+# - Clarity (20% weight): Is the presentation clear and professional?
+
+# ORIGINAL SOURCE:
+# {source_text}
+
+# GENERATED REPORT:
+# {generated_report}
+
+# INSTRUCTIONS:
+# 1. For each category, give a score (integer) out of its maximum:
+#     - Data accuracy: [0-50]
+#     - Analysis depth: [0-30]
+#     - Clarity: [0-20]
+# 2. Add up to a TOTAL out of 100.
+# 3. Give a brief 2-3 sentence evaluation.
+# 4. Use EXACTLY this format:
+# Data accuracy: [0-50]
+# Analysis depth: [0-30]
+# Clarity: [0-20]
+# TOTAL: [0-100]
+# Evaluation: [your evaluation]
+
+# Your evaluation:"""
+   
+#     try:
+#         response = judge_llm.invoke(prompt)
+#         response_text = response.content
+#         score_line = next(line for line in response_text.split('\n') if line.startswith('Score:'))
+#         score = int(score_line.split(':')[1].strip())
+#         eval_lines = [line for line in response_text.split('\n') if line.startswith('Evaluation:')]
+#         evaluation = ' '.join(line.split('Evaluation:')[1].strip() for line in eval_lines)
+#         return score, evaluation
+#     except Exception as e:
+#         logger.error(f"Error parsing judge response: {e}\nResponse was:\n{response_text}")
+#         return 50, "Could not parse evaluation"
+from typing import Tuple, Dict
+
+import re
+
+import re
+
 def evaluate_with_llm_judge(source_text: str, generated_report: str) -> dict:
     judge_llm = AzureChatOpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
@@ -595,7 +532,7 @@ Your evaluation:"""
         }
 
 def validate_report(report: str) -> bool:
-    required_sections = ["# Software Metrics Report", "## Overview", "## Key Findings", "## Recommendations"]
+    required_sections = ["# Software Metrics Report", "## Overview", "## Metrics Summary", "## Key Findings", "## Recommendations"]
     return all(section in report for section in required_sections)
 
 def validate_metrics(metrics: Dict[str, Any]) -> bool:
@@ -805,6 +742,19 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
 def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
     """
     Sets up the AI crew system for analysis.
+    
+    Creates three specialized crews:
+    1. Data Crew: Structures raw data into JSON format
+    2. Report Crew: Generates comprehensive analysis reports
+    3. Visualization Crew: Creates data visualizations
+    
+    Args:
+        extracted_text (str): Text extracted from PDFs
+        versions (List[str]): List of release versions to analyze
+        llm: Language model instance
+        
+    Returns:
+        tuple: (data_crew, report_crew, viz_crew)
     """
     structurer = Agent(
         role="Data Architect",
@@ -815,6 +765,7 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
+    # Ensure we have at least 2 versions for comparison; repeat the last one if needed
     if len(versions) < 2:
         raise ValueError("At least two versions are required for analysis")
     versions_for_example = versions[:3] if len(versions) >= 3 else versions + [versions[-1]] * (3 - len(versions))
@@ -822,9 +773,72 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
     validated_structure_task = Task(
         description=f"""Convert this release data to STRICT JSON:
 {extracted_text}
-...
-(unchanged details for validated_structure_task)
-...""",
+
+RULES:
+1. Output MUST be valid JSON only
+2. Use this EXACT structure:
+{{
+    "metrics": {{
+        "Open ALL RRR Defects": {{"ATLS": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...], "BTLS": [...]}},
+        "Open Security Defects": {{"ATLS": [...], "BTLS": [...]}},
+        "All Open Defects (T-1)": {{"ATLS": [...], "BTLS": [...]}},
+        "All Security Open Defects": {{"ATLS": [...], "BTLS": [...]}},
+        "Load/Performance": {{"ATLS": [...], "BTLS": [...]}},
+        "E2E Test Coverage": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...],
+        "Automation Test Coverage": [...],
+        "Unit Test Coverage": [...],
+        "Defect Closure Rate": [...],
+        "Regression Issues": [...],
+        "Customer Specific Testing (UAT)": {{
+            "RBS": [{{"version": "{versions[0]}", "pass_count": N, "fail_count": M, "status": "TEXT"}}, ...],
+            "Tesco": [...],
+            "Belk": [...]
+        }}
+    }}
+}}
+3. Include ALL metrics: {', '.join(EXPECTED_METRICS)}
+4. Use versions {', '.join(f'"{v}"' for v in versions)}
+5. For UAT, pass_count and fail_count must be non-negative integers, at least one non-zero per client
+6. For other metrics, values must be positive numbers (at least one non-zero per metric)
+7. Status must be one of: "ON TRACK", "MEDIUM RISK", "RISK", "NEEDS REVIEW"
+8. Ensure at least 2 items per metric/sub-metric, matching the provided versions
+9. No text outside JSON, no trailing commas, no comments
+10. Validate JSON syntax before output
+EXAMPLE:
+{{
+    "metrics": {{
+        "Open ALL RRR Defects": {{
+            "ATLS": [
+                {{"version": "{versions_for_example[0]}", "value": 10, "status": "RISK"}},
+                {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK"}}
+            ],
+            "BTLS": [
+                {{"version": "{versions_for_example[0]}", "value": 12, "status": "RISK"}},
+                {{"version": "{versions_for_example[1]}", "value": 9, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK"}}
+            ]
+        }},
+        "Customer Specific Testing (UAT)": {{
+            "RBS": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK"}}
+            ],
+            "Tesco": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK"}}
+            ],
+            "Belk": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK"}}
+            ]
+        }},
+        ...
+    }}
+}}""",
         agent=structurer,
         async_execution=False,
         expected_output="Valid JSON string with no extra text",
@@ -845,9 +859,103 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
 
     analysis_task = Task(
         description=f"""Enhance metrics JSON with trends:
-...
-(unchanged details for analysis_task)
-...""",
+1. Input is JSON from Data Structurer
+2. Add 'trend' field to each metric item
+3. Output MUST be valid JSON
+4. For metrics except Customer Specific Testing (UAT):
+   - Sort items by version ({', '.join(f'"{v}"' for v in versions)})
+   - For each item (except first per metric):
+     - Compute % change: ((current_value - previous_value) / previous_value) * 100
+     - If previous_value is 0 or |change| < 0.01, set trend to "→"
+     - If |% change| < 1%, set trend to "→"
+     - If % change > 0, set trend to "↑ (X.X%)" (e.g., "↑ (5.2%)")
+     - If % change < 0, set trend to "↓ (X.X%)"
+   - First item per metric gets "→"
+5. For Customer Specific Testing (UAT):
+   - For each client (RBS, Tesco, Belk), compute pass rate: pass_count / (pass_count + fail_count) * 100
+   - Sort items by version ({', '.join(f'"{v}"' for v in versions)})
+   - For each item (except first per client):
+     - Compute % change in pass rate: (current_pass_rate - previous_pass_rate)
+     - If previous_total or current_total is 0 or |change| < 0.01, set trend to "→"
+     - If |% change| < 1%, set trend to "→"
+     - If % change > 0, set trend to "↑ (X.X%)"
+     - If % change < 0, set trend to "↓ (X.X%)"
+   - First item per client gets "→"
+6. Ensure all metrics are included: {', '.join(EXPECTED_METRICS)}
+7. Use double quotes for all strings
+8. No trailing commas or comments
+9. Validate JSON syntax before output
+EXAMPLE INPUT:
+{{
+    "metrics": {{
+        "Open ALL RRR Defects": {{
+            "ATLS": [
+                {{"version": "{versions_for_example[0]}", "value": 10, "status": "RISK"}},
+                {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK"}}
+            ],
+            "BTLS": [
+                {{"version": "{versions_for_example[0]}", "value": 12, "status": "RISK"}},
+                {{"version": "{versions_for_example[1]}", "value": 9, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK"}}
+            ]
+        }},
+        "Customer Specific Testing (UAT)": {{
+            "RBS": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK"}}
+            ],
+            "Tesco": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK"}}
+            ],
+            "Belk": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK"}}
+            ]
+        }},
+        ...
+    }}
+}}
+EXAMPLE OUTPUT:
+{{
+    "metrics": {{
+        "Open ALL RRR Defects": {{
+            "ATLS": [
+                {{"version": "{versions_for_example[0]}", "value": 10, "status": "RISK", "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK", "trend": "↓ (20.0%)"}},
+                {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK", "trend": "↓ (37.5%)"}}
+            ],
+            "BTLS": [
+                {{"version": "{versions_for_example[0]}", "value": 12, "status": "RISK", "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "value": 9, "status": "MEDIUM RISK", "trend": "↓ (25.0%)"}},
+                {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK", "trend": "↓ (33.3%)"}}
+            ]
+        }},
+        "Customer Specific Testing (UAT)": {{
+            "RBS": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK", "pass_rate": 90.9, "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK", "pass_rate": 88.9, "trend": "↓ (2.0%)"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK", "pass_rate": 92.9, "trend": "↑ (4.0%)"}}
+            ],
+            "Tesco": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK", "pass_rate": 93.8, "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK", "pass_rate": 95.8, "trend": "↑ (2.0%)"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK", "pass_rate": 97.9, "trend": "↑ (2.1%)"}}
+            ],
+            "Belk": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK", "pass_rate": 85.1, "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK", "pass_rate": 89.4, "trend": "↑ (4.3%)"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK", "pass_rate": 91.5, "trend": "↑ (2.1%)"}}
+            ]
+        }},
+        ...
+    }}
+}}
+Only return valid JSON.""",
         agent=analyst,
         async_execution=True,
         context=[validated_structure_task],
@@ -869,9 +977,33 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
 
     visualization_task = Task(
         description=f"""Create a standalone Python script that:
-...
-(unchanged details for visualization_task)
-...""",
+1. Accepts the provided 'metrics' JSON structure as input.
+2. Generates exactly 10 visualizations for the following metrics, using the specified chart types:
+   - Open ALL RRR Defects (ATLS and BTLS): Grouped bar chart comparing ATLS and BTLS across releases.
+   - Open Security Defects (ATLS and BTLS): Grouped bar chart comparing ATLS and BTLS across releases.
+   - All Open Defects (T-1) (ATLS and BTLS): Grouped bar chart comparing ATLS and BTLS across releases.
+   - All Security Open Defects (ATLS and BTLS): Grouped bar chart comparing ATLS and BTLS across releases.
+   - Load/Performance (ATLS and BTLS): Grouped bar chart comparing ATLS and BTLS across releases.
+   - E2E Test Coverage: Line chart showing trend across releases.
+   - Automation Test Coverage: Line chart showing trend across releases.
+   - Unit Test Coverage: Line chart showing trend across releases.
+   - Defect Closure Rate (ATLS): Bar chart showing values across releases.
+   - Regression Issues: Bar chart showing values across releases.
+3. If Pass/Fail metrics are present in the JSON, generate additional grouped bar charts comparing Pass vs. Fail counts across releases.
+4. Each plot must use: plt.figure(figsize=(8,5), dpi=120).
+5. Save each chart as a PNG in 'visualizations/' directory with descriptive filenames (e.g., 'open_rrr_defects_atls_btls.png', 'e2e_test_coverage.png').
+6. Include error handling for missing or malformed data, ensuring all specified charts are generated.
+7. Log each chart generation attempt to 'visualization.log' for debugging.
+8. Output ONLY the Python code, with no markdown or explanation text.
+9. Do not generate charts for Delivery Against Requirements or Customer Specific Testing (RBS, Tesco, Belk).
+10. Ensure exactly 10 charts are generated for the listed metrics, plus additional charts for Pass/Fail metrics if present.
+11. For grouped bar charts, use distinct colors for ATLS and BTLS (e.g., blue for ATLS, orange for BTLS) and include a legend.
+12. Use the following metric lists for iteration:
+    atls_btls_metrics = {EXPECTED_METRICS[:5]}
+    coverage_metrics = {EXPECTED_METRICS[5:8]}
+    other_metrics = {EXPECTED_METRICS[8:10]}
+    Do not use a variable named 'expected_metrics'.
+13. Use versions: {', '.join(f'"{v}"' for v in versions)}""",
         agent=visualizer,
         context=[analysis_task],
         expected_output="Python script only"
@@ -899,6 +1031,49 @@ Only output this section.""",
         expected_output="Detailed markdown for Overview section"
     )
 
+    metrics_summary_task = Task(
+        description=f"""Write ONLY the '## Metrics Summary' section with the following order:
+### Delivery Against Requirements  
+### Open ALL RRR Defects (ATLS)  
+### Open ALL RRR Defects (BTLS)  
+### Open Security Defects (ATLS)  
+### Open Security Defects (BTLS)  
+### All Open Defects (T-1) (ATLS)  
+### All Open Defects (T-1) (BTLS)  
+### All Security Open Defects (ATLS)  
+### All Security Open Defects (BTLS)  
+### Customer Specific Testing (UAT)  
+#### RBS  
+#### Tesco  
+#### Belk  
+### Load/Performance  
+#### ATLS  
+#### BTLS
+### E2E Test Coverage  
+### Automation Test Coverage  
+### Unit Test Coverage  
+### Defect Closure Rate (ATLS)  
+### Regression Issues  
+
+STRICT RULES:
+- For Customer Specific Testing (UAT), generate tables for each client with the following columns: Release | Pass Count | Fail Count | Pass Rate (%) | Trend | Status
+- For other metrics, use existing table formats
+- Use only these statuses: ON TRACK, MEDIUM RISK, RISK, NEEDS REVIEW
+- Use only these trend formats: ↑ (X%), ↓ (Y%), →
+- No missing releases or extra formatting
+EXAMPLE FOR UAT:
+#### RBS
+| Release | Pass Count | Fail Count | Pass Rate (%) | Trend      | Status       |
+|---------|------------|------------|---------------|------------|--------------|
+| {versions_for_example[0]}    | 50         | 5          | 90.9          | →          | ON TRACK     |
+| {versions_for_example[1]}    | 48         | 6          | 88.9          | ↓ (2.0%)   | MEDIUM RISK  |
+| {versions_for_example[2]}    | 52         | 4          | 92.9          | ↑ (4.0%)   | ON TRACK     |
+Only output this section.""",
+        agent=reporter,
+        context=[analysis_task],
+        expected_output="Markdown for Metrics Summary"
+    )
+
     key_findings_task = Task(
         description=f"""Generate ONLY this Markdown section:
 ## Key Findings
@@ -909,6 +1084,7 @@ Only output this section.""",
 5. Fifth finding (2-3 sentences highlighting any unexpected patterns or anomalies)
 6. Sixth finding (2-3 sentences about performance or load metrics)
 7. Seventh finding (2-3 sentences summarizing defect management effectiveness)
+
 Maintain professional, analytical tone while being specific.""",
         agent=reporter,
         context=[analysis_task],
@@ -925,6 +1101,7 @@ Maintain professional, analytical tone while being specific.""",
 5. Fifth recommendation (2-3 sentences about performance optimization)
 6. Sixth recommendation (2-3 sentences about risk mitigation strategies)
 7. Seventh recommendation (2-3 sentences about monitoring improvements)
+
 Each recommendation should be specific, measurable, and tied to the findings.""",
         agent=reporter,
         context=[analysis_task],
@@ -933,25 +1110,32 @@ Each recommendation should be specific, measurable, and tied to the findings."""
 
     assemble_report_task = Task(
         description="""Assemble the final markdown report in this exact structure:
-# Software Metrics Report
 
-## Overview
-[Insert from Overview Task]
+# Software Metrics Report  
 
----
+## Overview  
+[Insert from Overview Task]  
 
-## Key Findings
-[Insert from Key Findings Task]
+---  
 
----
+## Metrics Summary  
+[Insert from Metrics Summary Task]  
 
-## Recommendations
+---  
+
+## Key Findings  
+[Insert from Key Findings Task]  
+
+---  
+
+## Recommendations  
 [Insert from Recommendations Task]
 
 Do NOT alter content. Just combine with correct formatting.""",
         agent=reporter,
         context=[
             overview_task,
+            metrics_summary_task,
             key_findings_task,
             recommendations_task
         ],
@@ -967,7 +1151,7 @@ Do NOT alter content. Just combine with correct formatting.""",
 
     report_crew = Crew(
         agents=[reporter],
-        tasks=[overview_task, key_findings_task, recommendations_task, assemble_report_task],
+        tasks=[overview_task, metrics_summary_task, key_findings_task, recommendations_task, assemble_report_task],
         process=Process.sequential,
         verbose=True
     )
@@ -1346,6 +1530,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     # Extract versions from PDF filenames
     versions = []
     for pdf_path in pdf_files:
+        # New pattern to match "Workcloud Task Management XX.XX" format
         match = re.search(r'(\d+\.\d+)(?:\s|\.)', os.path.basename(pdf_path))
         if match:
             versions.append(match.group(1))
@@ -1427,10 +1612,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
 
     metrics = shared_state.metrics
 
-    # NEW: Metrics summary from extracted metrics
-    metrics_summary = metrics_to_markdown(metrics)
-
-    # Get report from assemble_report_task (should be LLM analysis only, no tables)
+    # Get report from assemble_report_task
     enhanced_report = enhance_report_markdown(report_crew.tasks[-1].output.raw)
     if not validate_report(enhanced_report):
         logger.error("Report missing required sections")
@@ -1486,7 +1668,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
                     detail=f"Failed to generate minimum required visualizations: got {len(viz_base64)}, need at least {min_visualizations}"
                 )
 
-    # Evaluation uses metrics and report for LLM judgment
+    # **MAIN FIX: just these two lines changed below**
     evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
 
     return AnalysisResponse(
@@ -1494,24 +1676,9 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         visualizations=viz_base64,
         report=enhanced_report,
         evaluation=evaluation,
-        hyperlinks=all_hyperlinks,
-        metrics_summary=metrics_summary   # <-- Added!
+        hyperlinks=all_hyperlinks
     )
 
-@app.post("/save_report")
-async def save_report(request: UpdateReportRequest):
-    # 1. Save user-edited markdown to cache
-    save_markdown_to_cache(request.folder_path, request.report)
-
-    # 2. Extract metrics from the saved markdown
-    tables_with_headings = extract_metrics_from_markdown(request.report)
-    metrics_result = build_metrics_dict_from_extracted(tables_with_headings)
-
-    # 3. Generate visualizations based on the extracted metrics
-    run_fallback_visualization(metrics_result)
-
-    # 4. Optionally, return a success response
-    return {"success": True}
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_pdfs(request: FolderPathRequest):
@@ -1535,46 +1702,6 @@ async def analyze_pdfs(request: FolderPathRequest):
         logger.info(f"Cache miss for folder_path_hash: {folder_path_hash} or cache clear requested, running full analysis")
         response = await run_full_analysis(request)
 
-        # --- Generate metrics summary from structured metrics dict ---
-        # Support for both Pydantic model and dict return types:
-        if hasattr(response, "metrics"):
-            metrics = response.metrics
-        elif isinstance(response, dict):
-            metrics = response.get("metrics", None)
-        else:
-            metrics = None
-
-        metrics_summary_markdown = metrics_to_markdown(metrics)
-
-        # --- Remove metrics summary section from LLM report if accidentally included ---
-        # (just in case you have old reports with placeholder or heading)
-        report_text = (
-            getattr(response, "report", None)
-            if hasattr(response, "report")
-            else response.get("report", "") if isinstance(response, dict)
-            else ""
-        )
-        import re
-        # Remove section if present (conservative: remove heading + following placeholder line)
-        report_text_clean = re.sub(
-            r"(## Metrics Summary\s*\[?METRICS_SUMMARY_PLACEHOLDER\]?\s*)", 
-            "", 
-            report_text, 
-            flags=re.IGNORECASE
-        )
-        # Optionally remove blank lines left behind
-        report_text_clean = re.sub(r'\n{3,}', '\n\n', report_text_clean)
-
-        # Update the report field in the response
-        if hasattr(response, "copy"):
-            response = response.copy(update={
-                "report": report_text_clean,
-                "metrics_summary": metrics_summary_markdown,
-            })
-        elif isinstance(response, dict):
-            response["report"] = report_text_clean
-            response["metrics_summary"] = metrics_summary_markdown
-
         store_cached_report(folder_path_hash, pdfs_hash, response)
         return response
 
@@ -1583,8 +1710,6 @@ async def analyze_pdfs(request: FolderPathRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         plt.close('all')
-
-
 
 
 app.mount("/visualizations", StaticFiles(directory="visualizations"), name="visualizations")
