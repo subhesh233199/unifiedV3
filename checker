@@ -1,0 +1,41 @@
+import camelot
+import pdfplumber
+
+def extract_text_from_pdf(pdf_path):
+    """
+    Extracts all tables from a PDF file as CSV-style text, robust to minor format/layout changes.
+    If table extraction fails, falls back to extracting all text.
+    """
+    # Try Camelot first (best for digital PDFs)
+    try:
+        tables = camelot.read_pdf(pdf_path, pages='all', flavor='stream')
+        if tables and tables.n > 0:
+            table_texts = []
+            for table in tables:
+                # Convert DataFrame to CSV-style text for easy parsing by LLM
+                table_texts.append(table.df.to_csv(index=False, header=True))
+            return "\n\n".join(table_texts)
+    except Exception as e:
+        logger.warning(f"Camelot extraction failed for {pdf_path}: {e}")
+
+    # Fallback: try pdfplumber's table extraction
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            table_texts = []
+            for page in pdf.pages:
+                tables = page.extract_tables()
+                for table in tables:
+                    lines = ["\t".join(map(str, row)) for row in table]
+                    table_texts.append("\n".join(lines))
+            if table_texts:
+                return "\n\n".join(table_texts)
+    except Exception as e:
+        logger.warning(f"pdfplumber extraction failed for {pdf_path}: {e}")
+
+    # Final fallback: just get all the text
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            return "\n".join(page.extract_text() or '' for page in pdf.pages)
+    except Exception as e:
+        logger.error(f"Total PDF extraction failure for {pdf_path}: {e}")
+        return ""
