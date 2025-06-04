@@ -1,0 +1,20 @@
+import camelot
+import pdfplumber
+
+def extract_table_between_headers(pdf_path, start_header, end_header):
+    # 1. Find which page contains the start header
+    with pdfplumber.open(pdf_path) as pdf:
+        for i, page in enumerate(pdf.pages, 1):
+            text = page.extract_text() or ''
+            if start_header in text:
+                target_page = i
+                break
+        else:
+            return ""
+    # 2. Extract tables from that page
+    tables = camelot.read_pdf(pdf_path, pages=str(target_page), flavor='stream')
+    if tables and tables.n > 0:
+        # You may have more than one table per page; pick the largest, or the one with most columns
+        largest_table = max(tables, key=lambda t: t.df.shape[1])
+        return largest_table.df.to_csv(index=False, header=True)
+    return ""
