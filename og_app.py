@@ -1551,6 +1551,18 @@ def run_fallback_visualization(metrics: Dict[str, Any]):
         finally:
             plt.close('all')
 
+import re
+
+def extract_section_from_report(report: str, section: str) -> str:
+    """
+    Extracts the content of a markdown section, up to the next '##' or end of string.
+    """
+    pattern = rf"^## {re.escape(section)}\s*(.*?)(?=^## |\Z)"
+    match = re.search(pattern, report, re.DOTALL | re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    return ""
+
 async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     folder_path = convert_windows_path(request.folder_path)
     folder_path = os.path.normpath(folder_path)
@@ -1564,7 +1576,6 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     # Extract versions from PDF filenames
     versions = []
     for pdf_path in pdf_files:
-        # New pattern to match "Workcloud Task Management XX.XX" format
         match = re.search(r'(\d+\.\d+)(?:\s|\.)', os.path.basename(pdf_path))
         if match:
             versions.append(match.group(1))
@@ -1646,8 +1657,35 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
 
     metrics = shared_state.metrics
 
-    # Get report from assemble_report_task
-    enhanced_report = enhance_report_markdown(report_crew.tasks[-1].output.raw)
+    # --- MAIN CHANGE STARTS HERE ---
+
+    # Extract all sections from the LLM markdown
+    llm_report = report_crew.tasks[-1].output.raw
+    overview_md = extract_section_from_report(llm_report, "Overview")
+    key_findings_md = extract_section_from_report(llm_report, "Key Findings")
+    recommendations_md = extract_section_from_report(llm_report, "Recommendations")
+
+    # NEW: Build the metrics summary section from JSON, not from the LLM report
+    metrics_summary_md = build_metrics_summary_from_json(metrics, versions)
+
+    # Assemble the enhanced report using the above sections
+    enhanced_report = (
+        "# Software Metrics Report\n\n"
+        "## Overview\n"
+        f"{overview_md}\n\n"
+        "---\n"
+        "## Metrics Summary\n"
+        f"{metrics_summary_md}\n\n"
+        "---\n"
+        "## Key Findings\n"
+        f"{key_findings_md}\n\n"
+        "---\n"
+        "## Recommendations\n"
+        f"{recommendations_md}\n"
+    )
+
+    # --- MAIN CHANGE ENDS HERE ---
+
     if not validate_report(enhanced_report):
         logger.error("Report missing required sections")
         raise HTTPException(status_code=500, detail="Generated report is incomplete")
@@ -1702,7 +1740,6 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
                     detail=f"Failed to generate minimum required visualizations: got {len(viz_base64)}, need at least {min_visualizations}"
                 )
 
-    # **MAIN FIX: just these two lines changed below**
     evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
 
     return AnalysisResponse(
