@@ -302,15 +302,6 @@
                     <div id="reportContent" class="markdown-container"></div>
                 </div>
             </div>
-            <div class="card">
-                    <div class="card-header">
-                                <h5 class="mb-0">Metrics Summary</h5>
-                    </div>
-                    <div class="card-body">
-                             <div id="metricsSummaryContent" class="markdown-container"></div>
-                    </div>
-            </div>
-
 
             <div class="card">
                 <div class="card-header">
@@ -433,11 +424,9 @@
 
                 // Convert markdown to HTML and display
                 const reportContent = document.getElementById('reportContent');
-                reportContent.innerHTML = processMarkdownContent(rawMarkdown);
                 console.log('Raw markdown content before conversion:', rawMarkdown.substring(0, 100) + '...');
-                const metricsSummaryMarkdown = response.data.metrics_summary || '';
-                document.getElementById('metricsSummaryContent').innerHTML = processMarkdownContent(metricsSummaryMarkdown);
-                
+                reportContent.innerHTML = processMarkdownContent(rawMarkdown);
+
                 // Ensure the report content is visible and editor is hidden
                 markdownEditor.style.display = 'none';
                 reportContent.style.display = 'block';
