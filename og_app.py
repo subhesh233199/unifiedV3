@@ -68,10 +68,23 @@ llm = LLM(
 START_HEADER_PATTERN = 'Release Readiness Critical Metrics (Previous/Current):'
 END_HEADER_PATTERN = 'Release Readiness Functional teams Deliverables Checklist:'
 EXPECTED_METRICS = [
-    "Open ALL RRR Defects", "Open Security Defects", "All Open Defects (T-1)",
-    "All Security Open Defects", "Load/Performance", "E2E Test Coverage",
-    "Automation Test Coverage", "Unit Test Coverage", "Defect Closure Rate",
-    "Regression Issues", "Customer Specific Testing (UAT)"
+    "Delivery against requirements (PIRs)",
+    "Open ALL RRR Defects (Current Release) (ATLs)",
+    "Open ALL RRR Defects (Current Release) (BTLs)",
+    "Open Security RRR Defect(Current Release) (ATLs)",
+    "Open Security RRR Defect(Current Release) (BTLs)",
+    "All Open Defects (T-1) [Excluded Security and SDFC] (ATLs)",
+    "All Open Defects (T-1) [Excluded Security and SDFC] (BTLs)",
+    "All Security Open Defects  (ATLs)",
+    "All Security Open Defects (BTLs)",
+    "Customer Specific Testing (UAT) (RBS)",
+    "Customer Specific Testing (UAT) (TESCO)",
+    "Customer Specific Testing (UAT) (BELK)",
+    "Load/Performance (Newly reported issues) (ATLs)",
+    "Load/Performance (Newly reported issues) (BTLs)",
+    "E2E Test Coverage",
+    "Unit Test Coverage (New Features + New Bug Fixes)",
+    "Defect Closure Rate (ATLs)"
 ]
 CACHE_TTL_SECONDS = 3 * 24 * 60 * 60  # 3 days in seconds
 
