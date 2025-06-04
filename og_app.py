@@ -146,7 +146,7 @@ def build_metrics_summary_from_json(metrics_json, versions):
     lines = []
     metrics = metrics_json['metrics']
 
-    # Add each section as you want it to appear in markdown:
+    # --- Open ALL RRR Defects ---
     lines.append("### Open ALL RRR Defects (ATLS)\n")
     lines.append("| Release | Value | Trend | Status |")
     lines.append("|---------|-------|-------|--------|")
@@ -159,8 +159,46 @@ def build_metrics_summary_from_json(metrics_json, versions):
     for item in metrics['Open ALL RRR Defects']['BTLS']:
         lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
 
-    # Repeat for each metric... (expand for all as needed)
-    # Special structure for UAT:
+    # --- Open Security Defects ---
+    lines.append("\n### Open Security Defects (ATLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Open Security Defects']['ATLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    lines.append("\n### Open Security Defects (BTLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Open Security Defects']['BTLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- All Open Defects (T-1) ---
+    lines.append("\n### All Open Defects (T-1) (ATLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['All Open Defects (T-1)']['ATLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    lines.append("\n### All Open Defects (T-1) (BTLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['All Open Defects (T-1)']['BTLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- All Security Open Defects ---
+    lines.append("\n### All Security Open Defects (ATLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['All Security Open Defects']['ATLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    lines.append("\n### All Security Open Defects (BTLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['All Security Open Defects']['BTLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- Customer Specific Testing (UAT) ---
     lines.append("\n### Customer Specific Testing (UAT)\n")
     for client in ['RBS', 'Tesco', 'Belk']:
         lines.append(f"#### {client}")
@@ -169,7 +207,53 @@ def build_metrics_summary_from_json(metrics_json, versions):
         for item in metrics['Customer Specific Testing (UAT)'][client]:
             lines.append(f"| {item['version']} | {item['pass_count']} | {item['fail_count']} | {item.get('pass_rate','')} | {item.get('trend','')} | {item['status']} |")
 
-    # ... Add for all metrics per your desired order
+    # --- Load/Performance ---
+    lines.append("\n### Load/Performance (ATLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Load/Performance']['ATLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    lines.append("\n### Load/Performance (BTLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Load/Performance']['BTLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- E2E Test Coverage ---
+    lines.append("\n### E2E Test Coverage\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['E2E Test Coverage']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- Automation Test Coverage ---
+    lines.append("\n### Automation Test Coverage\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Automation Test Coverage']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- Unit Test Coverage ---
+    lines.append("\n### Unit Test Coverage\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Unit Test Coverage']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- Defect Closure Rate ---
+    lines.append("\n### Defect Closure Rate\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Defect Closure Rate']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # --- Regression Issues ---
+    lines.append("\n### Regression Issues\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Regression Issues']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
 
     return "\n".join(lines)
 
