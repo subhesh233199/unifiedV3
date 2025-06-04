@@ -1,20 +1,38 @@
 import camelot
-import pdfplumber
+import pandas as pd
 
-def extract_table_between_headers(pdf_path, start_header, end_header):
-    # 1. Find which page contains the start header
-    with pdfplumber.open(pdf_path) as pdf:
-        for i, page in enumerate(pdf.pages, 1):
-            text = page.extract_text() or ''
-            if start_header in text:
-                target_page = i
-                break
-        else:
-            return ""
-    # 2. Extract tables from that page
-    tables = camelot.read_pdf(pdf_path, pages=str(target_page), flavor='stream')
-    if tables and tables.n > 0:
-        # You may have more than one table per page; pick the largest, or the one with most columns
-        largest_table = max(tables, key=lambda t: t.df.shape[1])
-        return largest_table.df.to_csv(index=False, header=True)
-    return ""
+def extract_all_tables_to_csv(pdf_path, output_csv="all_extracted_tables.csv"):
+    """
+    Extracts all tables from the PDF using Camelot, concatenates them, and saves to a CSV.
+    Each table is separated by a blank row.
+    """
+    tables = camelot.read_pdf(pdf_path, pages='all', flavor='stream')
+    if tables.n == 0:
+        print("No tables found in PDF!")
+        return None
+    
+    all_tables = []
+    for i, table in enumerate(tables):
+        df = table.df
+        # Optionally clean header rows (remove duplicated header row if present)
+        if df.iloc[0].equals(df.columns):
+            df.columns = df.iloc[0]
+            df = df[1:]
+        df.columns = [str(col).strip() for col in df.columns]
+        df.insert(0, "Table#", i+1)  # Add table number for clarity
+        all_tables.append(df)
+        # Add a blank row (same number of columns) for separation, except after the last table
+        if i < tables.n - 1:
+            blank_row = pd.DataFrame([[""] * len(df.columns)], columns=df.columns)
+            all_tables.append(blank_row)
+    
+    # Concatenate all tables into one big DataFrame
+    combined = pd.concat(all_tables, ignore_index=True)
+    combined.to_csv(output_csv, index=False)
+    print(f"Extracted {tables.n} tables. Combined table saved to '{output_csv}'")
+    print("First 10 rows preview:")
+    print(combined.head(10))
+    return combined
+
+# Usage:
+# extract_all_tables_to_csv("yourfile.pdf")
