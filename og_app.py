@@ -775,18 +775,8 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
 
 def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
     """
-    Sets up the AI crew system for analysis.
-    
-    Creates three specialized crews:
-    1. Data Crew: Structures raw data into JSON format
-    2. Report Crew: Generates comprehensive analysis reports
-    3. Visualization Crew: Creates data visualizations
-    
-    Args:
-        extracted_text (str): Text extracted from PDFs
-        versions (List[str]): List of release versions to analyze
-        llm: Language model instance
-        
+    Sets up the AI crew system for analysis with maximum guardrails for robust JSON extraction.
+
     Returns:
         tuple: (data_crew, report_crew, viz_crew)
     """
@@ -799,7 +789,7 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
-    # Ensure we have at least 2 versions for comparison; repeat the last one if needed
+    # Ensure we have at least 2 versions for comparison
     if len(versions) < 2:
         raise ValueError("At least two versions are required for analysis")
     versions_for_example = versions[:3] if len(versions) >= 3 else versions + [versions[-1]] * (3 - len(versions))
@@ -809,15 +799,15 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
 {extracted_text}
 
 RULES:
-1. Output MUST be valid JSON only
+1. Output MUST be valid JSON only.
 2. Use this EXACT structure:
 {{
     "metrics": {{
-        "Open ALL RRR Defects": {{"ATLS": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...], "BTLS": [...]}},
-        "Open Security Defects": {{"ATLS": [...], "BTLS": [...]}},
-        "All Open Defects (T-1)": {{"ATLS": [...], "BTLS": [...]}},
-        "All Security Open Defects": {{"ATLS": [...], "BTLS": [...]}},
-        "Load/Performance": {{"ATLS": [...], "BTLS": [...]}},
+        "Open ALL RRR Defects": {{"ATLS": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...], "BTLS": [...] }},
+        "Open Security Defects": {{"ATLS": [...], "BTLS": [...] }},
+        "All Open Defects (T-1)": {{"ATLS": [...], "BTLS": [...] }},
+        "All Security Open Defects": {{"ATLS": [...], "BTLS": [...] }},
+        "Load/Performance": {{"ATLS": [...], "BTLS": [...] }},
         "E2E Test Coverage": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...],
         "Automation Test Coverage": [...],
         "Unit Test Coverage": [...],
@@ -830,21 +820,22 @@ RULES:
         }}
     }}
 }}
-3. Include ALL metrics: {', '.join(EXPECTED_METRICS)}
-4. Use versions {', '.join(f'"{v}"' for v in versions)}
-5. For UAT, pass_count and fail_count must be non-negative integers, at least one non-zero per client
-6. For other metrics, values must be positive numbers (at least one non-zero per metric)
-7. Status must be one of: "ON TRACK", "MEDIUM RISK", "RISK", "NEEDS REVIEW"
-8. Ensure at least 2 items per metric/sub-metric, matching the provided versions
-9. No text outside JSON, no trailing commas, no comments
-10. Validate JSON syntax before output
+3. **NO HALLUCINATED or INVENTED VALUES.** If a value cannot be confidently extracted or is missing, set "value": 0 and "status": "NEEDS REVIEW". For UAT, set both "pass_count" and "fail_count" to 0 and "status": "NEEDS REVIEW".
+4. **ALWAYS include ALL required metrics:** {', '.join(EXPECTED_METRICS)}
+5. **ALWAYS include ALL provided versions:** {', '.join(f'"{v}"' for v in versions)}
+6. For UAT, pass_count and fail_count must be non-negative integers. If unclear, set both to 0 and status to "NEEDS REVIEW".
+7. For other metrics, values must be positive numbers or 0. If unclear, set value to 0 and status to "NEEDS REVIEW".
+8. Status must be one of: "ON TRACK", "MEDIUM RISK", "RISK", "NEEDS REVIEW".
+9. **Never omit any field or metric, even if the source is unclear.** Fill with placeholder values as above.
+10. **NO TEXT outside JSON, NO trailing commas, NO comments.**
+11. **Validate JSON syntax before output.**
 EXAMPLE:
 {{
     "metrics": {{
         "Open ALL RRR Defects": {{
             "ATLS": [
                 {{"version": "{versions_for_example[0]}", "value": 10, "status": "RISK"}},
-                {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[1]}", "value": 0, "status": "NEEDS REVIEW"}},
                 {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK"}}
             ],
             "BTLS": [
@@ -855,24 +846,16 @@ EXAMPLE:
         }},
         "Customer Specific Testing (UAT)": {{
             "RBS": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[0]}", "pass_count": 0, "fail_count": 0, "status": "NEEDS REVIEW"}},
                 {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK"}},
                 {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK"}}
             ],
-            "Tesco": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK"}}
-            ],
-            "Belk": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK"}}
-            ]
+            ...
         }},
         ...
     }}
-}}""",
+}}
+""",
         agent=structurer,
         async_execution=False,
         expected_output="Valid JSON string with no extra text",
@@ -934,23 +917,6 @@ EXAMPLE INPUT:
                 {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK"}}
             ]
         }},
-        "Customer Specific Testing (UAT)": {{
-            "RBS": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK"}}
-            ],
-            "Tesco": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK"}}
-            ],
-            "Belk": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK"}}
-            ]
-        }},
         ...
     }}
 }}
@@ -963,28 +929,7 @@ EXAMPLE OUTPUT:
                 {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK", "trend": "↓ (20.0%)"}},
                 {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK", "trend": "↓ (37.5%)"}}
             ],
-            "BTLS": [
-                {{"version": "{versions_for_example[0]}", "value": 12, "status": "RISK", "trend": "→"}},
-                {{"version": "{versions_for_example[1]}", "value": 9, "status": "MEDIUM RISK", "trend": "↓ (25.0%)"}},
-                {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK", "trend": "↓ (33.3%)"}}
-            ]
-        }},
-        "Customer Specific Testing (UAT)": {{
-            "RBS": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK", "pass_rate": 90.9, "trend": "→"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK", "pass_rate": 88.9, "trend": "↓ (2.0%)"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK", "pass_rate": 92.9, "trend": "↑ (4.0%)"}}
-            ],
-            "Tesco": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK", "pass_rate": 93.8, "trend": "→"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK", "pass_rate": 95.8, "trend": "↑ (2.0%)"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK", "pass_rate": 97.9, "trend": "↑ (2.1%)"}}
-            ],
-            "Belk": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK", "pass_rate": 85.1, "trend": "→"}},
-                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK", "pass_rate": 89.4, "trend": "↑ (4.3%)"}},
-                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK", "pass_rate": 91.5, "trend": "↑ (2.1%)"}}
-            ]
+            ...
         }},
         ...
     }}
@@ -1205,6 +1150,7 @@ Do NOT alter content. Just combine with correct formatting.""",
             logger.info(f"{name} task {i} async_execution: {task.async_execution}")
 
     return data_crew, report_crew, viz_crew
+
 
 def clean_json_output(raw_output: str, fallback_versions: List[str]) -> dict:
     logger.info(f"Raw analysis output: {raw_output[:200]}...")
