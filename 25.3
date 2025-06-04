@@ -1,0 +1,409 @@
+kcloud TM Releases  3 Jira links
+Workcloud Task Management 25.3 Release Readiness
+Created by Swathi Bandi, last modified a minute ago Add Approval
+Release Readiness Review - Software Design Assurance Team
+ 
+ 
+ 
+Stakeholders:
+Functions	Software
+Engineering	Product
+Management	CFQ
+Readiness	Security R eadiness	Deployment
+Readiness	Service
+Readiness	Program
+Management	Product
+Quality	Customer
+Support(L1
+Management)	Customer
+Support(L2
+Management)
+ 
+Stakeholders	Alan Epshteyn	Jagadesh Thondapu	 Nilesh Bihani	Randy Olds	Ranjan Rao	Sarah Liptak	Dimitar Popovski	Deepak
+Kamani/Neha
+Khandelwal	Sahasrabudhe,
+Chetan	Bitteker, Eva
+Functional
+Leads	Avdhoot Walvekar	Prabu Yogesh	Vijay Patil,
+Abhay	Kadiveti, Ram
+Prasad	Mayur, Phapale	Phil Sonnema	Kantha Lakshmi K	Swathi Bandi		Maddirala,
+Umakanth
+Program Version, Scope & Timeline: 
+ 
+Overview / Key Features Summary
+TASK-25.3 RRR detailed scope has been captured in release notes: 25.3 Parity Features / Enhancements Release Notes
+Release Scope 
+Summary	Data
+Source	Delivered/Open	Comments
+Release Epic
+Epics/Stories
+Delivered	Jira	Release Scope 
+12 issues / 0 issues  
+
+SFDC Defects
+Fixed	Jira	Total Fixed in 25.3    26 issues
+( 32 issues ) 
+
+kcloud TM Releases
+ 3 Jira l
+inks
+
+			 
+Security Defects
+Fixed	Jira	Total Fixed in 25.3    7 issues
+3 issues
+ 
+Internal Defects
+Fixed (SIT +
+CST)	Jira	Total Fixed in 25.3    98 issues
+ 
+Technical Debt	Q3 '23	Q4 '23	Q1 '24	Q2 '24	Q3 '24	Total
+SFDC Open Issues across ALL Versions	0 issues
+0 issues
+2 issues
+7 issues
+7 issues
+85 issues
+
+Release Cycle Reported Bugs
+System Health Dashboard: https://confluence.zebra.com/display/CFQ/Release+Validation+Status+-+25.3
+ 
+Release Readiness Critical Metrics (Previous/Current):
+	Metrics	Release Criteria	Current Release RRR(TASK-25.3)	Status	Summary/ Take -Away
+1	Delivery against requirements (PIRs)	100%	100%	ON TRACK	
+
+kcloud
+ TM Releases  3 Ji
+ra links
+		
+2	Open ALL RRR
+Defects(Current
+Release)	ATLS: 
+< 30	> 30 & <= 50 	>50
+BTLS: 
+<50	>50 & <= 100	> 100
+	24 issues ATLS and
+ 
+29 issues BTLS
+ON TRACK	0 issues
+Team is working on verify ticket validation, there are issues which required day across scenarios or specific application state. Team will close these tickets in two days.
+3	Open Security 25.3
+Release(Newly
+Reported)	ATLS:
+<5	>5 &<=10 	>10
+BTLS:
+<10	>10 & <=20	>20
+ 	43 issues ATLS and
+0 issues BTLS and
+RISK	TM-50663 : Done.
+TM-50599 --We have Reported 9 Issues, out of those issues, 7 are fixed and 2 are replicating. Developer team is reviewing these issues.
+4	All Open Defects (T-1)
+[Exclude Security and SFDC]	ATLS:
+<100	>100 &<=300 	>300
+BTLS:
+< 300	>300 & <=600	>600
+	382 issues ATLS
+ 
+  689 issues BTLs 
+RISK	Need to have burn down plan to decrease the ATLS
+
+kcloud
+ TM Releases  3 Ji
+ra links
+		
+5	All Security Open
+Defects (Over all)	ATLS:
+< 30	>30 &<= 50	>50
+BTLS:
+<50	>50 & <=80	>80
+	103 issues ATLS( 5 issues highest)  and 70 issues BTLs
+RISK	ATL Burn down plan is put in place
+6	Customer Specific Testing (UAT)
+Minimum 5
+Customers
+Zero ATLS
+>90% of Testcases	
+Client	ATLs	BTLS
+RBS UAT
+Total Testcases - 526
+Total Executed- 488
+Pass - 479
+Fail - 9
+ATL - 0
+BTL - 9
+Unexecuted - 38	0 issues
+9 issues
+
+Tesco
+Total Testcases - 60
+Total Executed- 60
+Pass - 60
+Fail - 0	0 issues
+0 issues
+
+Belk
+Total Testcases - 55
+Total Executed- 43
+Pass - 43
+Fail - 0
+Unexecuted - 12	0 issues
+0 issues
+
+	ON TRACK	
+7	Load/Performance (Newly reported issues)	Zero ATLS	New issues reported in 25.3 Release. - 
+ATLs : 2
+BTLs : 1
+Open issues in 25.3 Release - 2
+Overall Open Issues:  27	RISK	TM-50132 - CL01_Notifier 01 went down on Onebox environment IN PROGRESS
+TM-51660 - Cl01_PT - Multiple app servers VM's went down IN PROGRESS
+8	E2E Test Coverage	 >=90%	Total Testcases - 449
+Total Executed-  449
+Pass - 328
+Fail - 121 
+ATL - 50
+BTL - 71	ON TRACK	More Impact test cases are added and over all coverage has been improved
+9	Automation Test
+Coverage	  >=90%	Total Testcases - 1042
+Total Executed- 1042
+Pass - 959
+Fail - 83
+ATL - 27
+BTL - 56	ON TRACK	45+ testcases has been added as part of the Automation
+Coverage
+10	APIGEE	>=90%	Total Testcases - 620
+Total Executed- 620
+Pass - 534
+Fail - 86 (with BTL)	ON TRACK	No blockers found in execution
+kcloud
+ TM Releases  3 Ji
+ra links
+		
+11	Unit Test Coverage
+(New Features + New Bug Fixes)	 Upward Trend(5%)	 	WIP	Compared to last releases the unit test coverage improved a lot
+12	Defect Closure
+Rate (ATLs)	>75%	60.4%	ON TRACK	
+13	Regression Issues	 	TM-50701 and TM-50741
+	Both the Regression issues are closed
+Release Readiness Functional teams Deliverables Checklist:
+Summary	High Level Status
+ 
+Criteria	Status
+Desired Experience and Intended use cases delivered ?	YES
+Release Notes Reviewed and Approved ( Epics Delivered and Feature Parity )?	YES
+Doc Reviews (Admin and User Guides ) peer reviewed with Systems Engineering, Product Marketing and Quality and released in Agile ?	NA
+Solution Cycle Test Results Approved  ( No ATLs / Known ATLs list have been reviewed and approved) ?	Yes, reviewed internally.
+Cost Reviewed for New Request ( if applicable ) ?	NA
+Customer Beta Testing successfully completed for selected features/customers (if applicable) ?	YES
+Proceed with Release ?	YES
+PDM Readiness
+ 
+Release Version	Total New Issues found	Comments
+TASK-25.3	14 New Issues found (14 ATL's )
+Manually Created tickets from Nucleus.
+In Future Nucleus automation rules are in place to create Jira tickets.	Overall Open Issues:105 ATL's (5 Highest)
+70 BTL's 
+Security Readiness
+ 
+System Test Readiness	 
+data	Release Summary
+Assessment Criteria	RRR Goals	Status
+Test Coverage	100% (for Man. & Auto)	100%
+Test Pass Rate (based off total coverage of the final RC cycle)	> =95% (for Man. & Auto)	94%
+Ability to upgrade/Downgrade SW Release Versions(N-2)	YES (& w/o undue concern from customer standpoint)	 
+Requirements Traceability Coverage?	YES & >= 95%	100%
+Regression Test Coverage	>95%	100%
+New Features Test Coverage	>95%	100%
+New Feature Integration Test Coverage	>95%	100%
+s
+	
+Test Automation % Improved from previous release ?	 	45 TC Newly Added
+CST/UAT Test Coverage	>95%	 
+Cluster based CST/UAT Test Coverage done before RRR 	Establish Baseline	 
+Post Deployment Load Test Plan for Availability & Scalability (Current Release per cluster)	Yes	 
+Retrospective done for customer reported issues ?	Yes/No	 
+kcloud TM Releases  3 Jira link
+ 
+*Mobility {*}
+Component  	Android App Version           	iOS App Version                        	Component                   	Version              	New               
+ 	 	 	RTM20 	25.3.1.0	Yes 
+My Work 	v25.3.0 (2025022620)	v25.3.0 (2025022620)	My Work 	25.3.1.0	Yes 
+Chat 	v2025.3.0 (2025022122)	v2025.3.0 (2025021722)	 	25.3.1.0	Yes 
+Check 	NA	NA	Check 	25.3.1.0	Yes 
+Walk 	NA	NA	Walk 	25.3.1.0	Yes 
+Pinboard 	NA	NA	Kernel 	25.3.1.0	Yes 
+Note 	NA	NA	Note 	25.3.1.0	Yes 
+Docs 	NA	NA	Docs 	25.3.1.0	Yes* 
+Form 	NA	NA	 Forms	25.3.1.0	Yes* 
+Visual 	NA	NA	Visual 	25.3.1.0	Yes* 
+*With 24.10 as we are having consolidated apps, only those versions are mentioned.
+ 
+ R7  Intra SWS BU Integration Compatibility Matrix
+Product             	Version       	Flavor                                             	Test Coverage {}
+WFM 	45.1.16	TM + WFM  	Smoke Test and Basic Integration Completed 
+WFM 	45.1.16	WFM + Kernel + MYWORK 	Smoke Test and Basic Integration Completed 
+ZPA 	7.0.4	TM + ZPA 	Smoke Test and Basic Integration Completed 
+ Reflexis Task Management Compatibility  
+Form Factor 
+Handheld (Zebra, Generic Device) 
+Tablet (Generic Device) 
+Desktop 
+Browser tested in R7 	Certified Version 
+Chrome 	Version 133.0.6943.142 (Official Build) (64-bit)
+Firefox 	135.0.1 (64-bit)
+Edge	Version 133.0.3065.92 (Official build) (64-bit)
+Safari	Version 18.3 (20620.2.4.11.5)
+ 
+Platfors	m 
+Device Type 	 OS Version 
+Android 	Zebra TC-26	Android 12
+Android	Zebra TC-51	Android 13
+Android - 8.1.0
+Android	Zebra Tablet	Android 11
+Android	Samsung f22	Android 13
+Android 	Galaxy M32	Android 13 
+Android 	Galaxy M21	Android 13
+Android 	Galaxy Tab A8  	Android 14
+iOS 	iPhone 11 	17.6.1
+iOS 	iPhone 11	17.3.1
+iOS	iPhone XR	17.6.1
+IOS 	IPad 9th Gen 	v17.5.1
+kcloud TM Releases  3 Jira link
+ 
+Criteria (Mandatory) 	Status 
+Automation of manual deployment steps	YES
+Include/incorporate deployment script into the engineering team's build artifact	YES
+Advance notice of DDL implementation and other DB scripts	YES
+Disaster recovery plan available	YES
+Design Document with Dependencies and High Level Design Available?	YES
+Peer and Tool Based Code Review done and approved ?	YES
+Unit Test Coverage (New Features + New Bug Fixes)	YES
+Release Branch Strategy Adhered ?	YES
+CI/CD pipeline setup and fully automated?	YES, Partial
+Engineering Readiness
+ 
+Load / Capacity Results	10PT Results :  
+PT Results : https://confluence.zebra.com/display/NFTE/25.3+Release+-+Performance
+ 
+Citeria	Bugs Reported	Comments
+V17: Overall ATL's and BTL's which are newly reported 25.3 Release 	3	 
+No. of Issues addressed as part of 25.3 Release	1	 
+Overall open  PT issues 	27	 
+Summary	following are the observations:
+A critical issue has been identified on the infrastructure side, referenced as    
+In this build, CPU performance has improved slightly compared to version 25.2, on both the application servers and database servers.	 
+ 	 	 
+ 
+s
+Criteria
+Status for RRR 3-Mar-2025
+Customer Facing Release Notes Including Known Issues (Current Release)	Shelby sent out Release Notes for PDM sign off 27-Feb
+Internal and Partner Training Scheduled  and Completed	Completed 27-Feb
+Knowledge Center Updated Items 	N/A
+Zebra Learning Portal Trainings	Will be uploaded within 2 weeks
+kclouCS & d TSM T Rraeinleeads eansd  3 Jira link
+Ready
+ 
+Release Criteria	TASK 25.3 Status
+Readiness
+    Criteria	Status
+Defect Closure Rate	60.4%
+L3 bugs delivered as per burndown	44
+Security burndown plan aligned and approved by corporate security	WIP
+Impact Analysis Done for New Features and Bug Fixes ?	YES
+Release Notes Reviewed and Approved 	YES
+ 
+Release Readiness Checklist(Engineering/CloudOps)	Pass Metric	Owner 	Status
+Logging and Alerting(New/Additional features)	YES	Eng	YES
+Monitoring(Application/Module)	YES	Eng	YES
+New features/Changes from Previous release	YES	Eng	YES
+Firewall and ACL’s( Customer Environment)	YES	Eng	YES
+CMDB Enabled	YES	Eng	YES
+Is there be a DB intensive task( eg. Index Re-creation) involved ? Have the Instructions be shared with CloudOps ?	YES/NO(Link)	Eng	YES - Setup Instructions v25.3.1.0 - RAM Technical Documentation Zebra Confluence
+
+Any hardware/ infrastructure resource upgrade required to support this release	YES/NO	Eng	NO
+Rollback plan documented	YES(Link)	Eng	YES
+Change Management Enabled(Operational Change Management)-CAB	YES	Cloudops	YES
+Uptime.com Enabled	YES	Cloudops	YES
+Deployment and Supporting Scripts provided by Engineering and Reviewed by team	YES/NO	Cloudops	NA
+No Manual Steps/Scripts per Setup Instruction
+Deployment Checklist
+ 
+8 issues 	 	 Refresh
+Release Jira Status
+Key	Summary	Assignee	Status
+DQRD-5371
+PDM Readiness
+Yogesh Prabu	DONE
+DQRD-5372
+Security Readiness
+Ram Prasad Kadiveti	DONE
+DQRD-5373
+System Test Readiness data
+Abhay Vijay Patil	DONE
+DQRD-5374
+Engineering Readiness
+Avdhoot Walvekar	DONE
+cDloQudR DT-M53 R7e5leases
+ 3 Jira links
+Load / Capacity Results
+Ram Prasad Kadiveti	OPEN
+DQRD-5376
+	CS & S Trained and Ready
+Sarah Liptak	DONE
+DQRD-5377
+	Release Criteria Readiness
+Kantha Lakshmi Krishna Kumar	DONE
+DQRD-5378
+	Deployment Checklist
+Ranjan Rao	DONE
+k
+8 issues 	 	 Refresh
+25.3 RRR Window Reported Bugs
+Task 25.3	Internal -
+Performance	Internal - Security	Internal - QA	Pre-Prod
+Reported	3 issues
+16 issues
+81 issues
+
+Fixed/Open	1 issue / 2 issues
+1 issue / 15 issues
+37 issues /
+44 issues
+
+Hot Fix Patch for 25.3 release
+Trend Charts(WIP)
+ATL	BTL
+ 
+257
+RRR ATL Issues trend  
+ 
+ Created / 385 Resolved issues	Created vs. Resolved Issues   14 w
+
+	 
+49
+RRR BTL Issues trend
+ 
+ Created / 226 Resolved issues	Created vs. Resolved Issues   14 w
+
+
+(SIT + CST + Security) ATL Issues trend (Last 30 days)  	
+ 
+No labels
+kcloud3 Co TmMm Reelneatsses  3 Jira links
+ Swathi Bandi
+Action Items of Pre-RRR
+1.	TM-50599 get back on the scope of Broken Access Control left over issues. @Walvekar, Avdhoot
+2.	TM-50806: Reopened security bug, analysis required to understand the impact of not fixing it. @Anil, Vernekar
+3.	@Walvekar, Avdhoot and @Olds, Randy to work on closure of false alarm issues created by Nucleus AutoBot 
+4.	TM-50132, TM-51660: Performance issues to be scrubbed @Anil, Vernekar
+5.	TM-50741 : Reopened regression defect to verify and close the issue @Vijay Patil, Abhay
+6.	CloudOps team to revert on the email sent for 25.3 release deployment activities @Rao, Ranjan
+7.	Confluence page to be setup for 25.3 deployment activities and share with Ranjan team @Anil, Vernekar.
+8.	TM-51385 and TM-51395 are both related to the 25.3 new feature (business continuity epic). Will this be resolved within this cycle? @Anil, Vernekar( Question from PDM)
+9.	Request the functional leads to close the bugs which ever are in verify state before March 3. @Vijay Patil, Abhay @Nikam, Priyanka
+ TM-50599 : One pager should be created. All the necessary details to be mentioned in the ticket, plan of fixing the bug. @Avdhoot Walvekar @Vernekar Anil 
+TM-50806 : The discuss will be mointored and should be discussed after the RRR @Vernekar Anil @Avdhoot Walvekar 
+Schedule a call with Randy team to understand the process for the bug @Swathi Bandi @Neha Khandelwal 
+TM-50132, TM-51660 : Performance issues: Ram will work with IT team to get more details for dumps.Mointor the issues for review before  next RRR release.
+TM-51422 : 2 issues mentioned in the verify state from Abhay, team to be closed before the deployement date. (1 issue closed already) @Abhay Vijay Patil 
+ 
