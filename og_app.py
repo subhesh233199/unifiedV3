@@ -792,71 +792,118 @@ def validate_metrics(metrics: Dict[str, Any]) -> bool:
                 return False
     return True
 
+from collections import OrderedDict
+
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
+    # The authoritative, locked metric list (copy from setup_crew or a single location in your project)
+    METRICS_LIST = [
+        "Delivery against requirements (PIRs)",
+        "Open ALL RRR Defects (Current Release) (ATLs)",
+        "Open ALL RRR Defects (Current Release) (BTLs)",
+        "Open Security RRR Defect(Current Release) (ATLs)",
+        "Open Security RRR Defect(Current Release) (BTLs)",
+        "All Open Defects (T-1) [Excluded Security and SDFC] (ATLs)",
+        "All Open Defects (T-1) [Excluded Security and SDFC] (BTLs)",
+        "All Security Open Defects  (ATLs)",
+        "All Security Open Defects (BTLs)",
+        "Customer Specific Testing (UAT) (RBS)",
+        "Customer Specific Testing (UAT) (TESCO)",
+        "Customer Specific Testing (UAT) (BELK)",
+        "Load/Performance (Newly reported issues) (ATLs)",
+        "Load/Performance (Newly reported issues) (BTLs)",
+        "E2E Test Coverage",
+        "Unit Test Coverage (New Features + New Bug Fixes)",
+        "Defect Closure Rate (ATLs)"
+    ]
+
     logger.info(f"Raw output type: {type(raw_output)}, content: {raw_output if isinstance(raw_output, str) else raw_output}")
     if not isinstance(raw_output, str):
         logger.warning(f"Expected raw_output to be a string, got {type(raw_output)}. Falling back to empty JSON.")
         raw_output = "{}"  # Fallback to empty JSON string
     logger.info(f"Processing task output: {raw_output[:200]}...")
+
     data = clean_json_output(raw_output, fallback_versions)
-    if not validate_metrics(data):
-        logger.error(f"Validation failed for processed output: {json.dumps(data, indent=2)[:200]}...")
-        raise ValueError("Invalid or incomplete metrics data")
-    # Validate and correct trends
+    if 'metrics' not in data or not isinstance(data['metrics'], dict):
+        logger.warning("No 'metrics' in LLM output, starting with empty structure.")
+        data['metrics'] = {}
+
+    # Always build a clean, filtered, ordered metrics dict
+    clean_metrics = OrderedDict()
+    for metric in METRICS_LIST:
+        # Check if metric is present and appears valid
+        if metric in data['metrics']:
+            metric_data = data['metrics'][metric]
+        else:
+            # Fill missing with appropriate defaults
+            metric_data = []
+
+            # Determine metric type by naming
+            if 'Customer Specific Testing (UAT)' in metric:
+                for v in fallback_versions:
+                    metric_data.append({"version": v, "pass_count": 0, "fail_count": 0, "status": "NEEDS REVIEW"})
+            elif '(ATLs)' in metric or '(BTLs)' in metric:
+                for v in fallback_versions:
+                    metric_data.append({"version": v, "value": 0, "status": "NEEDS REVIEW"})
+            else:
+                for v in fallback_versions:
+                    metric_data.append({"version": v, "value": 0, "status": "NEEDS REVIEW"})
+
+        # Ensure *every* metric has an entry per version
+        if 'Customer Specific Testing (UAT)' in metric:
+            versions_found = {item.get("version") for item in metric_data}
+            for v in fallback_versions:
+                if v not in versions_found:
+                    metric_data.append({"version": v, "pass_count": 0, "fail_count": 0, "status": "NEEDS REVIEW"})
+            # sort by version
+            metric_data = sorted(metric_data, key=lambda x: x['version'])
+        else:
+            versions_found = {item.get("version") for item in metric_data}
+            for v in fallback_versions:
+                if v not in versions_found:
+                    metric_data.append({"version": v, "value": 0, "status": "NEEDS REVIEW"})
+            metric_data = sorted(metric_data, key=lambda x: x['version'])
+
+        clean_metrics[metric] = metric_data
+
+    data['metrics'] = clean_metrics
+
+    # Trend calculation
     for metric, metric_data in data['metrics'].items():
-        if metric in EXPECTED_METRICS[:5]:  # ATLS/BTLS metrics
-            for sub in ['ATLS', 'BTLS']:
-                items = sorted(metric_data[sub], key=lambda x: x['version'])
-                for i in range(len(items)):
-                    if i == 0 or not items[i].get('value') or not items[i-1].get('value'):
+        if 'Customer Specific Testing (UAT)' in metric:
+            # UAT metrics: calculate pass_rate and trend
+            items = metric_data
+            for i in range(len(items)):
+                pass_count = float(items[i].get('pass_count', 0))
+                fail_count = float(items[i].get('fail_count', 0))
+                total = pass_count + fail_count
+                pass_rate = (pass_count / total * 100) if total > 0 else 0
+                items[i]['pass_rate'] = pass_rate
+                if i == 0:
+                    items[i]['trend'] = '→'
+                else:
+                    prev_pass_count = float(items[i-1].get('pass_count', 0))
+                    prev_fail_count = float(items[i-1].get('fail_count', 0))
+                    prev_total = prev_pass_count + prev_fail_count
+                    prev_pass_rate = (prev_pass_count / prev_total * 100) if prev_total > 0 else 0
+                    if prev_total == 0 or total == 0 or abs(pass_rate - prev_pass_rate) < 0.01:
                         items[i]['trend'] = '→'
                     else:
-                        prev_val = float(items[i-1]['value'])
-                        curr_val = float(items[i]['value'])
-                        if prev_val == 0 or abs(curr_val - prev_val) < 0.01:
+                        pct_change = pass_rate - prev_pass_rate
+                        if abs(pct_change) < 1:
                             items[i]['trend'] = '→'
+                        elif pct_change > 0:
+                            items[i]['trend'] = f"↑ ({abs(pct_change):.1f}%)"
                         else:
-                            pct_change = ((curr_val - prev_val) / prev_val) * 100
-                            if abs(pct_change) < 1:
-                                items[i]['trend'] = '→'
-                            elif pct_change > 0:
-                                items[i]['trend'] = f"↑ ({abs(pct_change):.1f}%)"
-                            else:
-                                items[i]['trend'] = f"↓ ({abs(pct_change):.1f}%)"
-        elif metric == "Customer Specific Testing (UAT)":
-            for client in ['RBS', 'Tesco', 'Belk']:
-                items = sorted(metric_data[client], key=lambda x: x['version'])
-                for i in range(len(items)):
-                    pass_count = float(items[i].get('pass_count', 0))
-                    fail_count = float(items[i].get('fail_count', 0))
-                    total = pass_count + fail_count
-                    pass_rate = (pass_count / total * 100) if total > 0 else 0
-                    items[i]['pass_rate'] = pass_rate
-                    if i == 0:
-                        items[i]['trend'] = '→'
-                    else:
-                        prev_pass_count = float(items[i-1].get('pass_count', 0))
-                        prev_fail_count = float(items[i-1].get('fail_count', 0))
-                        prev_total = prev_pass_count + prev_fail_count
-                        prev_pass_rate = (prev_pass_count / prev_total * 100) if prev_total > 0 else 0
-                        if prev_total == 0 or total == 0 or abs(pass_rate - prev_pass_rate) < 0.01:
-                            items[i]['trend'] = '→'
-                        else:
-                            pct_change = pass_rate - prev_pass_rate
-                            if abs(pct_change) < 1:
-                                items[i]['trend'] = '→'
-                            elif pct_change > 0:
-                                items[i]['trend'] = f"↑ ({abs(pct_change):.1f}%)"
-                            else:
-                                items[i]['trend'] = f"↓ ({abs(pct_change):.1f}%)"
-        else:  # Non-ATLS/BTLS metrics
-            items = sorted(metric_data, key=lambda x: x['version'])
+                            items[i]['trend'] = f"↓ ({abs(pct_change):.1f}%)"
+        else:
+            # All other metrics
+            items = metric_data
             for i in range(len(items)):
                 if i == 0 or not items[i].get('value') or not items[i-1].get('value'):
                     items[i]['trend'] = '→'
                 else:
-                    prev_val = float(items[i-1]['value'])
+                    prev_val = float(items[i-1].get('value'))
                     curr_val = float(items[i]['value'])
                     if prev_val == 0 or abs(curr_val - prev_val) < 0.01:
                         items[i]['trend'] = '→'
@@ -868,6 +915,12 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
                             items[i]['trend'] = f"↑ ({abs(pct_change):.1f}%)"
                         else:
                             items[i]['trend'] = f"↓ ({abs(pct_change):.1f}%)"
+
+    # Optionally, validate after fixing
+    if not validate_metrics(data):
+        logger.error(f"Validation failed for cleaned output: {json.dumps(data, indent=2)[:200]}...")
+        raise ValueError("Invalid or incomplete metrics data (post-cleanup)")
+
     return data
 
 def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
