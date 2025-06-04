@@ -139,6 +139,40 @@ class SharedState:
 
 shared_state = SharedState()
 
+def build_metrics_summary_from_json(metrics_json, versions):
+    """
+    Generate the Metrics Summary section (markdown tables) directly from metrics JSON.
+    """
+    lines = []
+    metrics = metrics_json['metrics']
+
+    # Add each section as you want it to appear in markdown:
+    lines.append("### Open ALL RRR Defects (ATLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Open ALL RRR Defects']['ATLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    lines.append("\n### Open ALL RRR Defects (BTLS)\n")
+    lines.append("| Release | Value | Trend | Status |")
+    lines.append("|---------|-------|-------|--------|")
+    for item in metrics['Open ALL RRR Defects']['BTLS']:
+        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
+
+    # Repeat for each metric... (expand for all as needed)
+    # Special structure for UAT:
+    lines.append("\n### Customer Specific Testing (UAT)\n")
+    for client in ['RBS', 'Tesco', 'Belk']:
+        lines.append(f"#### {client}")
+        lines.append("| Release | Pass Count | Fail Count | Pass Rate (%) | Trend | Status |")
+        lines.append("|---------|------------|------------|---------------|-------|--------|")
+        for item in metrics['Customer Specific Testing (UAT)'][client]:
+            lines.append(f"| {item['version']} | {item['pass_count']} | {item['fail_count']} | {item.get('pass_rate','')} | {item.get('trend','')} | {item['status']} |")
+
+    # ... Add for all metrics per your desired order
+
+    return "\n".join(lines)
+
 # SQLite database setup
 def init_cache_db():
     """
