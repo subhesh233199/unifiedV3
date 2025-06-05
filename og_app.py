@@ -305,31 +305,29 @@ def get_pdf_files_from_folder(folder_path: str) -> List[str]:
    
     return pdf_files
 
-def extract_text_from_pdf(pdf_path: str) -> str:
+
+def extract_section_from_pdf(pdf_path, start_pattern, end_pattern):
     """
-    Extracts text content from PDF file.
-    
-    Args:
-        pdf_path (str): Path to PDF file
-        
-    Returns:
-        str: Extracted text content
+    Extract the section between start and end headers from a PDF using pdfplumber.
     """
-    try:
-        with open(pdf_path, 'rb') as file:
-            reader = PdfReader(file)
-            text = ''
-            for page in reader.pages:
-                extracted = page.extract_text()
-                if extracted:
-                    text += extracted + '\n'
-            if not text.strip():
-                raise ValueError(f"No text extracted from {pdf_path}")
-            text = re.sub(r'\s+', ' ', text).strip()
-            return text
-    except Exception as e:
-        logger.error(f"Error extracting text from {pdf_path}: {str(e)}")
-        raise
+    import re
+    full_text = ""
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                full_text += page_text + "\n"
+    pattern = re.compile(
+        re.escape(start_pattern) + r"(.*?)" + re.escape(end_pattern),
+        re.DOTALL | re.IGNORECASE,
+    )
+    match = pattern.search(full_text)
+    if match:
+        return match.group(1).strip()
+    else:
+        logger.error("Section not found in: " + pdf_path)
+        return ""
+
 
 def extract_hyperlinks_from_pdf(pdf_path: str) -> List[Dict[str, str]]:
     """
@@ -365,31 +363,52 @@ def extract_hyperlinks_from_pdf(pdf_path: str) -> List[Dict[str, str]]:
         logger.error(f"Error extracting hyperlinks from {pdf_path}: {str(e)}")
     return hyperlinks
 
-def locate_table(text: str, start_header: str, end_header: str) -> str:
+import pandas as pd
+import re
+
+def parse_metrics_section(section_text, columns_of_interest, expected_metrics):
     """
-    Locates and extracts table data between specified headers in text.
-    
-    Args:
-        text (str): Full text content
-        start_header (str): Starting header pattern
-        end_header (str): Ending header pattern
-        
-    Returns:
-        str: Extracted table text
-        
-    Raises:
-        ValueError: If headers not found or no data between headers
+    Extracts required metrics and columns from the extracted text.
+    Only keeps ATLs if both ATLs and BTLs are present.
     """
-    start_index = text.find(start_header)
-    end_index = text.find(end_header)
-    if start_index == -1:
-        raise ValueError(f'Header {start_header} not found in text')
-    if end_index == -1:
-        raise ValueError(f'Header {end_header} not found in text')
-    table_text = text[start_index:end_index].strip()
-    if not table_text:
-        raise ValueError(f"No metrics table data found between headers")
-    return table_text
+    rows = []
+    lines = section_text.split('\n')
+    i = 0
+    while i < len(lines):
+        for metric in expected_metrics:
+            if metric in lines[i]:
+                metric_row = {"Metrics": metric, "Release Criteria": "", "Current Release RRR": "", "Status": ""}
+                found_atls = False
+                for j in range(1, 6):
+                    if i+j >= len(lines):
+                        break
+                    l = lines[i+j]
+                    if "ATLS" in l:
+                        atls_line = re.sub(r"ATLS[:\-]*\s*", "", l, flags=re.IGNORECASE)
+                        parts = re.split(r'\s{2,}|\t+', atls_line.strip())
+                        if len(parts) >= 3:
+                            metric_row["Release Criteria"] = parts[0]
+                            metric_row["Current Release RRR"] = parts[1]
+                            metric_row["Status"] = parts[2]
+                        found_atls = True
+                        break
+                if not found_atls:
+                    for j in range(1, 6):
+                        if i+j < len(lines):
+                            fallback = lines[i+j].strip()
+                            if fallback and "BTL" not in fallback and "BTLs" not in fallback:
+                                parts = re.split(r'\s{2,}|\t+', fallback)
+                                if len(parts) >= 3:
+                                    metric_row["Release Criteria"] = parts[0]
+                                    metric_row["Current Release RRR"] = parts[1]
+                                    metric_row["Status"] = parts[2]
+                                break
+                rows.append(metric_row)
+                break
+        i += 1
+    df = pd.DataFrame(rows, columns=columns_of_interest)
+    return df
+
 
 # def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Tuple[int, str]:
 #     judge_llm = AzureChatOpenAI(
@@ -1323,20 +1342,32 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     if len(versions) < 2:
         raise HTTPException(status_code=400, detail="At least two versions are required for analysis")
 
-    # Parallel PDF processing
+    # Parallel PDF processing: extract the relevant section only!
     extracted_texts = []
     all_hyperlinks = []
     with ThreadPoolExecutor(max_workers=4) as executor:
-        text_futures = {executor.submit(extract_text_from_pdf, pdf): pdf for pdf in pdf_files}
+        # Section extraction
+        section_futures = {
+            executor.submit(
+                extract_section_from_pdf,
+                pdf,
+                START_HEADER_PATTERN,
+                END_HEADER_PATTERN
+            ): pdf for pdf in pdf_files
+        }
+        # Hyperlink extraction (unchanged)
         hyperlink_futures = {executor.submit(extract_hyperlinks_from_pdf, pdf): pdf for pdf in pdf_files}
        
-        for future in as_completed(text_futures):
-            pdf = text_futures[future]
+        for future in as_completed(section_futures):
+            pdf = section_futures[future]
             try:
-                text = locate_table(future.result(), START_HEADER_PATTERN, END_HEADER_PATTERN)
-                extracted_texts.append((os.path.basename(pdf), text))
+                section_text = future.result()
+                if section_text:
+                    extracted_texts.append((os.path.basename(pdf), section_text))
+                else:
+                    logger.error(f"No section found in {pdf}")
             except Exception as e:
-                logger.error(f"Failed to process text from {pdf}: {str(e)}")
+                logger.error(f"Failed to extract section from {pdf}: {str(e)}")
                 continue
        
         for future in as_completed(hyperlink_futures):
@@ -1350,6 +1381,15 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     if not extracted_texts:
         raise HTTPException(status_code=400, detail="No valid text extracted from PDFs")
 
+    # ---- Structure and filter section_texts for ATLs only, expected metrics only ----
+    # Optionally: structure each extracted section as a DataFrame
+    # structured_tables = []
+    # for name, section_text in extracted_texts:
+    #     df = parse_metrics_section(section_text, COLUMNS_OF_INTEREST, EXPECTED_METRICS)
+    #     structured_tables.append((name, df))
+    # You can use structured_tables for more advanced analytics/reporting
+
+    # For the current pipeline, concatenate the extracted text for agent input
     full_source_text = "\n".join(
         f"File: {name}\n{text}" for name, text in extracted_texts
     )
@@ -1463,6 +1503,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         evaluation=evaluation,
         hyperlinks=all_hyperlinks
     )
+
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
