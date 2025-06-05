@@ -795,7 +795,6 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
-    # === MISSING ANALYST AGENT (ADD THIS!) ===
     analyst = Agent(
         role="Trend Analyst",
         goal="Add accurate trends to metrics data and maintain valid JSON",
@@ -851,7 +850,20 @@ RAW TABLE TEXT:
         )
     )
 
-    # === Your existing analysis_task, reporter, visualizer, etc. go here (unchanged) ===
+    # === NEW: Add the analysis_task definition here ===
+    analysis_task = Task(
+        description="Analyze the metrics JSON and add trend analysis for each metric, ensuring valid JSON output.",
+        agent=analyst,
+        async_execution=False,
+        expected_output="Valid JSON string with trends for each metric",
+        context=[validated_structure_task],
+        callback=lambda output: (
+            logger.info(f"Analysis task output type: {type(output.raw)}, content: {output.raw if isinstance(output.raw, str) else output.raw}"),
+            setattr(shared_state, 'metrics', process_task_output(output.raw, versions))
+        )
+    )
+
+    # === Your existing reporter, visualizer, etc. go here (unchanged) ===
 
     data_crew = Crew(
         agents=[structurer, analyst],
@@ -882,6 +894,7 @@ RAW TABLE TEXT:
             logger.info(f"{name} task {i} async_execution: {task.async_execution}")
 
     return data_crew, report_crew, viz_crew
+
 
 
 
