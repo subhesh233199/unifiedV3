@@ -804,11 +804,27 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
-    # Ensure at least 2 versions for context
+    reporter = Agent(
+        role="Technical Writer",
+        goal="Generate a professional markdown report",
+        backstory="Writes structured software metrics reports",
+        llm=llm,
+        verbose=True,
+        memory=True,
+    )
+
+    visualizer = Agent(
+        role="Data Visualizer",
+        goal="Generate consistent visualizations for all metrics",
+        backstory="Expert in generating Python plots for software metrics",
+        llm=llm,
+        verbose=True,
+        memory=True,
+    )
+
     if len(versions) < 2:
         raise ValueError("At least two versions are required for analysis")
 
-    # Strict prompt for the Data Architect task
     strict_prompt = f"""
 You are an expert data extractor.
 
@@ -850,7 +866,6 @@ RAW TABLE TEXT:
         )
     )
 
-    # === NEW: Add the analysis_task definition here ===
     analysis_task = Task(
         description="Analyze the metrics JSON and add trend analysis for each metric, ensuring valid JSON output.",
         agent=analyst,
@@ -863,7 +878,47 @@ RAW TABLE TEXT:
         )
     )
 
-    # === Your existing reporter, visualizer, etc. go here (unchanged) ===
+    overview_task = Task(
+        description="Write a concise Markdown overview of the release health and notable metric highlights.",
+        agent=reporter,
+        context=[analysis_task],
+        expected_output="Markdown string"
+    )
+
+    metrics_summary_task = Task(
+        description="Write a detailed Markdown section with the metrics summary, using a table for each metric.",
+        agent=reporter,
+        context=[analysis_task],
+        expected_output="Markdown string"
+    )
+
+    key_findings_task = Task(
+        description="Write a concise Markdown bullet list of key findings across all releases and metrics.",
+        agent=reporter,
+        context=[analysis_task],
+        expected_output="Markdown string"
+    )
+
+    recommendations_task = Task(
+        description="Write a Markdown bullet list of actionable recommendations based on key findings.",
+        agent=reporter,
+        context=[analysis_task],
+        expected_output="Markdown string"
+    )
+
+    assemble_report_task = Task(
+        description="Assemble the markdown sections into a full structured report.",
+        agent=reporter,
+        context=[overview_task, metrics_summary_task, key_findings_task, recommendations_task],
+        expected_output="Full markdown report string"
+    )
+
+    visualization_task = Task(
+        description="Generate Python code to produce 6 clear visualizations for the extracted metrics.",
+        agent=visualizer,
+        context=[analysis_task],
+        expected_output="Python code"
+    )
 
     data_crew = Crew(
         agents=[structurer, analyst],
@@ -894,6 +949,7 @@ RAW TABLE TEXT:
             logger.info(f"{name} task {i} async_execution: {task.async_execution}")
 
     return data_crew, report_crew, viz_crew
+
 
 
 
