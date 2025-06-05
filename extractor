@@ -1,0 +1,26 @@
+import json
+import re
+
+def extract_jql_queries_from_json(json_data):
+    """
+    Extracts all JQL queries from a Confluence JSON export.
+    Args:
+        json_data (dict): The loaded Confluence page JSON.
+    Returns:
+        list: List of JQL query strings found in the page.
+    """
+    html_content = json_data.get('body', {}).get('storage', {}).get('value', '')
+    # Regex to match <ac:parameter ac:name="jqlQuery">JQL HERE</ac:parameter>
+    jql_pattern = r'<ac:parameter ac:name="jqlQuery">(.*?)</ac:parameter>'
+    # Find all matches, HTML escapes may exist (e.g., &quot;), decode if needed
+    matches = re.findall(jql_pattern, html_content, re.DOTALL)
+    # Optionally unescape HTML entities (if required)
+    import html
+    jql_queries = [html.unescape(jql.strip()) for jql in matches]
+    return jql_queries
+
+# Example usage:
+# with open("confluence_extract (1).json", "r", encoding="utf-8") as f:
+#     data = json.load(f)
+# jql_list = extract_jql_queries_from_json(data)
+# print(jql_list)
