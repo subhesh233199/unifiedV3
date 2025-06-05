@@ -866,16 +866,19 @@ def setup_crew(structured_json: dict, versions: List[str], llm=llm) -> tuple:
     )
 
     metrics_summary_task = Task(
-        description="""For each metric in the provided 'metrics' JSON object, create a markdown table comparing all available versions. "
-        "Each table should have columns: Version, Release Criteria, Current Release RRR, Status. "
-        "Below each table, briefly comment on any major differences or trends. "
-        "Example:\n\n"
-        "#### Open ALL RRR Defects (Current Release)\n"
-        "| Version | Release Criteria | Current Release RRR | Status |\n"
-        "|---------|-----------------|---------------------|--------|\n"
-        "| 25.1    | ...             | ...                 | ...    |\n"
-        "| 25.2    | ...             | ...                 | ...    |\n"
-        "| 25.3    | ...             | ...                 | ...    |\n"""",
+        description="""For each metric in the provided 'metrics' JSON object, create a markdown table comparing all available versions.
+Each table should have columns: Version, Release Criteria, Current Release RRR, Status, Trend.
+Use the Trend value as provided in the data.
+Below each table, briefly comment on any major differences or trends.
+Example:
+
+#### Open ALL RRR Defects (Current Release)
+| Version | Release Criteria | Current Release RRR | Status | Trend |
+|---------|-----------------|---------------------|--------|-------|
+| 25.1    | ...             | ...                 | ...    |  →    |
+| 25.2    | ...             | ...                 | ...    |  ↑    |
+| 25.3    | ...             | ...                 | ...    |  ↓    |
+""",
         agent=reporter,
         context=[analysis_task],
         expected_output="Markdown string"
@@ -933,6 +936,63 @@ def setup_crew(structured_json: dict, versions: List[str], llm=llm) -> tuple:
     # The Data Architect/data_crew is removed since the data is already structured.
     # If your pipeline downstream expects three return values, you can return None in place of data_crew:
     return None, report_crew, viz_crew
+
+def add_trends_to_metrics(structured_json):
+    """
+    For each metric, sorts the entries by version, adds a 'Trend' key based on Current Release RRR value:
+    - '→' for the first version
+    - '↑' if increased vs previous
+    - '↓' if decreased vs previous
+    - '→' if unchanged
+    Works for both ATLS/BTLS and flat metric lists.
+    """
+    import re
+
+    def extract_numeric(val):
+        if val is None:
+            return None
+        nums = re.findall(r'-?\d+(?:\.\d+)?', str(val))
+        if nums:
+            return float(nums[0])
+        return None
+
+    # Handle dict of metrics (possibly with ATLS/BTLS or simple lists)
+    for metric, values in structured_json.get("metrics", {}).items():
+        if isinstance(values, dict):  # ATLS/BTLS structure
+            for k in values:
+                metric_rows = values[k]
+                # Sort by Version if needed
+                metric_rows.sort(key=lambda x: x.get("version", ""))
+                prev_val = None
+                for i, row in enumerate(metric_rows):
+                    curr_val = extract_numeric(row.get("Current Release RRR", row.get("value", "")))
+                    if i == 0 or curr_val is None or prev_val is None:
+                        row["Trend"] = "→"
+                    else:
+                        if curr_val > prev_val:
+                            row["Trend"] = "↑"
+                        elif curr_val < prev_val:
+                            row["Trend"] = "↓"
+                        else:
+                            row["Trend"] = "→"
+                    prev_val = curr_val
+        elif isinstance(values, list):  # Flat list
+            metric_rows = values
+            metric_rows.sort(key=lambda x: x.get("version", ""))
+            prev_val = None
+            for i, row in enumerate(metric_rows):
+                curr_val = extract_numeric(row.get("Current Release RRR", row.get("value", "")))
+                if i == 0 or curr_val is None or prev_val is None:
+                    row["Trend"] = "→"
+                else:
+                    if curr_val > prev_val:
+                        row["Trend"] = "↑"
+                    elif curr_val < prev_val:
+                        row["Trend"] = "↓"
+                    else:
+                        row["Trend"] = "→"
+                prev_val = curr_val
+    return structured_json
 
 def clean_json_output(raw_output: str, fallback_versions: List[str]) -> dict:
     logger.info(f"Raw analysis output: {raw_output[:200]}...")
@@ -1349,6 +1409,9 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     # Structure as deeply nested JSON for validation/LLM
     structured_json = structure_metrics_for_agents(all_structured_rows, EXPECTED_METRICS)
 
+    # Add Trend column to each row!
+    structured_json = add_trends_to_metrics(structured_json)
+
     # For debugging: print(json.dumps(structured_json, indent=2))
 
     # Get sub-crews (the first "data_crew" is None in this pipeline)
@@ -1442,6 +1505,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         evaluation=evaluation,
         hyperlinks=all_hyperlinks
     )
+
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
