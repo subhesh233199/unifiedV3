@@ -1,0 +1,31 @@
+# AZURE_OPENAI_API_KEY=dfe8fa3f42104388a15a81eefc924c84
+# AZURE_OPENAI_ENDPOINT=https://genaiexamples.openai.azure.com/
+# AZURE_API_VERSION=2024-08-01-preview
+# DEPLOYMENT_NAME=gpt-4o
+
+#OCR SYSTEM PATH
+OCR_SYSTEM_PATH = r"C:\Users\AS9969\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+
+
+#CREDENTIALS FOR MODELS
+AZURE_OPENAI_ENDPOINT="https://sc-sws-design-assurance-eng-openai.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01" 
+AZURE_API_VERSION="2024-06-01"
+AZURE_OPENAI_API_KEY="yM9ICdeZBfTJ843ojtsmXky9dTG8MU5SRxv6xy0lUKk2bGHd3T1BJQQJ99BBAC4f1cMXJ3w3AAABACOG6ys3"
+DEPLOYMENT_NAME="gpt-4o"
+
+#CREDENTIALS FOR EMBEDDINGS
+embedding_api_key = "yM9ICdeZBfTJ843ojtsmXky9dTG8MU5SRxv6xy0lUKk2bGHd3T1BJQQJ99BBAC4f1cMXJ3w3AAABACOG6ys3"
+embedding_api_version="1"
+embedding_azure_endpoint="https://sc-sws-design-assurance-eng-openai.openai.azure.com/openai/deployments/text-embedding-3-small/embeddings?api-version=1" 
+embedding_azure_deployment="text-embedding-3-small"
+
+#Gemini api 
+Gemini_api_key="AIzaSyCgmflZul_Mg0bDUMv16ZtKYCWvvH6MRcA"
+
+#pincone key
+pinecone_key="pcsk_8jPm2_AstFq4SGDmfuFudXeeTViCs8s4qM6PM5Xhs4d1F81mwwVdMCnSr92G2LoBWEyca"
+QDRANT_URL="https://804aac8d-d2ae-4617-a06f-3b02e3cb2b00.us-east4-0.gcp.cloud.qdrant.io"
+QDRANT_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.EZZBJacuQqa7rYHDm3QOnrTCkqn71HYQw_PB4I_EZMg"
+
+
+
