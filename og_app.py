@@ -277,6 +277,44 @@ def cleanup_old_cache():
         logger.info(f"Cleaned up old cache entries, deleted {deleted_rows} rows")
     except Exception as e:
         logger.error(f"Error cleaning up old cache entries: {str(e)}")
+def structure_metrics_for_agents(all_structured_rows, expected_metrics):
+    structured = {"metrics": {}}
+    for metric in expected_metrics:
+        metric_rows = [r for r in all_structured_rows if r["Metrics"] == metric]
+        # Identify if ATLS/BTLS metric
+        if any("ATLS" in (r.get("Status") or "") for r in metric_rows):
+            # Collect by ATLS and BTLS
+            atls_list = []
+            btls_list = []
+            for r in metric_rows:
+                version = r.get("Version")
+                value = None
+                # Try extracting a number from "Current Release RRR" or another column if needed
+                try:
+                    value = float(re.findall(r'\d+', r.get("Current Release RRR", ""))[0])
+                except Exception:
+                    value = 0
+                status = r.get("Status", "")
+                row = {"version": version, "value": value, "status": status}
+                if "ATLS" in status:
+                    atls_list.append(row)
+                elif "BTLS" in status:
+                    btls_list.append(row)
+            structured["metrics"][metric] = {"ATLS": atls_list, "BTLS": btls_list}
+        else:
+            metric_list = []
+            for r in metric_rows:
+                version = r.get("Version")
+                value = None
+                try:
+                    value = float(re.findall(r'\d+', r.get("Current Release RRR", ""))[0])
+                except Exception:
+                    value = 0
+                status = r.get("Status", "")
+                row = {"version": version, "value": value, "status": status}
+                metric_list.append(row)
+            structured["metrics"][metric] = metric_list
+    return structured
 
 def get_pdf_files_from_folder(folder_path: str) -> List[str]:
     """
@@ -1254,7 +1292,6 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     # Extract versions from PDF filenames
     versions = []
     for pdf_path in pdf_files:
-        # New pattern to match "Workcloud Task Management XX.XX" format
         match = re.search(r'(\d+\.\d+)(?:\s|\.)', os.path.basename(pdf_path))
         if match:
             versions.append(match.group(1))
@@ -1309,18 +1346,10 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
             row["Version"] = name
             all_structured_rows.append(row)
     
-    # Group rows by metric name
-    grouped = {}
-    for row in all_structured_rows:
-        metric = row["Metrics"]
-        row_copy = row.copy()
-        row_copy.pop("Metrics", None)  # Don't need redundant column in each row
-        grouped.setdefault(metric, []).append(row_copy)
-    structured_json = {"metrics": grouped}
+    # Structure as deeply nested JSON for validation/LLM
+    structured_json = structure_metrics_for_agents(all_structured_rows, EXPECTED_METRICS)
 
-
-    # For agent context and debugging (optional, not needed downstream):
-    # print(json.dumps(structured_json, indent=2))
+    # For debugging: print(json.dumps(structured_json, indent=2))
 
     # Get sub-crews (the first "data_crew" is None in this pipeline)
     data_crew, report_crew, viz_crew = setup_crew(structured_json, versions, llm)
@@ -1413,6 +1442,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         evaluation=evaluation,
         hyperlinks=all_hyperlinks
     )
+
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_pdfs(request: FolderPathRequest):
