@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import asyncio
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
+import pdfplumber
 from crewai import Agent, Task, Crew, Process, LLM
 from langchain_openai import AzureChatOpenAI
 import ssl
@@ -65,6 +66,8 @@ llm = LLM(
 )
 
 # Constants
+
+
 START_HEADER_PATTERN = 'Release Readiness Critical Metrics (Previous/Current):'
 END_HEADER_PATTERN = 'Release Readiness Functional teams Deliverables Checklist:'
 COLUMNS_OF_INTEREST = ['Metrics', 'Release Criteria', 'Current Release RRR', 'Status']
