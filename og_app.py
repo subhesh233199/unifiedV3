@@ -779,52 +779,15 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
     return data
 
 
-def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
+def setup_crew(structured_json: dict, versions: List[str], llm=llm) -> tuple:
     """
     Sets up the AI crew system for analysis.
 
-    Creates three specialized crews:
-    1. Data Crew: Structures raw data into JSON format (strict, tabular, for ATLs only)
-    2. Report Crew: Generates comprehensive analysis reports
-    3. Visualization Crew: Creates data visualizations
-
-    Args:
-        extracted_text (str): Text extracted from PDFs
-        versions (List[str]): List of release versions to analyze
-        llm: Language model instance
+    Now expects already structured JSON, so LLM is NOT required to extract/structure metrics.
 
     Returns:
-        tuple: (data_crew, report_crew, viz_crew)
+        tuple: (report_crew, viz_crew)
     """
-
-    # === METRICS & COLUMNS DEFINITIONS ===
-    COLUMNS_OF_INTEREST = ['Metrics', 'Release Criteria', 'Current Release RRR', 'Status']
-    METRICS_OF_INTEREST = [
-        "Open ALL RRR Defects (Current Release)",
-        "Open Security RRR Defect(Current Release)",
-        "All Open Defects (T-1) [Excluded Security and SDFC]",
-        "All Security Open Defects (T-1)",
-        "Automation TestCoverage",
-        "Regression Issues"
-    ]
-
-    structurer = Agent(
-        role="Data Architect",
-        goal="Structure raw release data into VALID JSON format",
-        backstory="Expert in transforming unstructured data into clean JSON structures",
-        llm=llm,
-        verbose=True,
-        memory=True,
-    )
-
-    analyst = Agent(
-        role="Trend Analyst",
-        goal="Add accurate trends to metrics data and maintain valid JSON",
-        backstory="Data scientist specializing in metric analysis",
-        llm=llm,
-        verbose=True,
-        memory=True,
-    )
 
     reporter = Agent(
         role="Technical Writer",
@@ -844,56 +807,13 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
-    if len(versions) < 2:
-        raise ValueError("At least two versions are required for analysis")
-
-    strict_prompt = f"""
-You are an expert data extractor.
-
-TASK:
-From the raw table text below (from the PDF), extract ONLY the following metrics, for ATLs only:
-{chr(10).join(METRICS_OF_INTEREST)}
-
-For each, extract ONLY for ATLs (ignore BTLs/others).
-
-For each row, extract ONLY these columns: {', '.join(COLUMNS_OF_INTEREST)}.
-
-If a value is missing, fill with "" or "NEEDS REVIEW".
-
-OUTPUT FORMAT (JSON ONLY, no markdown or extra text):
-
-{{
-  "metrics": [
-    {{
-      "Metrics": "Open ALL RRR Defects (Current Release)",
-      "Release Criteria": "...",
-      "Current Release RRR": "...",
-      "Status": "..."
-    }},
-    ... repeat for all metrics ...
-  ]
-}}
-RAW TABLE TEXT:
-{extracted_text}
-"""
-
-    validated_structure_task = Task(
-        description=strict_prompt,
-        agent=structurer,
-        async_execution=False,
-        expected_output="Valid JSON string with no extra text",
-        callback=lambda output: (
-            logger.info(f"Structure task output type: {type(output.raw)}, content: {output.raw if isinstance(output.raw, str) else output.raw}"),
-            setattr(shared_state, 'metrics', process_task_output(output.raw, versions))
-        )
-    )
-
+    # Prompt the LLM to analyze structured JSON (metrics across releases)
     analysis_task = Task(
-        description="Analyze the metrics JSON and add trend analysis for each metric, ensuring valid JSON output.",
-        agent=analyst,
+        description="Given the following structured release metrics JSON, perform trend analysis for each metric across all releases. Summarize changes, risks, and improvements in a way a software quality leader would value. Output valid JSON with added 'trend' or 'observation' for each metric.",
+        agent=reporter,
         async_execution=False,
-        expected_output="Valid JSON string with trends for each metric",
-        context=[validated_structure_task],
+        expected_output="Valid JSON string with trend/observation per metric",
+        context=[structured_json],  # Context is the JSON, not a Task
         callback=lambda output: (
             logger.info(f"Analysis task output type: {type(output.raw)}, content: {output.raw if isinstance(output.raw, str) else output.raw}"),
             setattr(shared_state, 'metrics', process_task_output(output.raw, versions))
@@ -901,14 +821,14 @@ RAW TABLE TEXT:
     )
 
     overview_task = Task(
-        description="Write a concise Markdown overview of the release health and notable metric highlights.",
+        description="Write a concise Markdown overview of the release health and notable metric highlights based on the analyzed structured metrics.",
         agent=reporter,
         context=[analysis_task],
         expected_output="Markdown string"
     )
 
     metrics_summary_task = Task(
-        description="Write a detailed Markdown section with the metrics summary, using a table for each metric.",
+        description="Write a detailed Markdown section with the metrics summary as tables for each metric, using the analyzed structured metrics.",
         agent=reporter,
         context=[analysis_task],
         expected_output="Markdown string"
@@ -936,22 +856,15 @@ RAW TABLE TEXT:
     )
 
     visualization_task = Task(
-        description="Generate Python code to produce 6 clear visualizations for the extracted metrics.",
+        description="Generate Python code to produce clear visualizations for the metrics across releases. Output only the code. Use the structured metrics JSON for your data.",
         agent=visualizer,
         context=[analysis_task],
         expected_output="Python code"
     )
 
-    data_crew = Crew(
-        agents=[structurer, analyst],
-        tasks=[validated_structure_task, analysis_task],
-        process=Process.sequential,
-        verbose=True
-    )
-
     report_crew = Crew(
         agents=[reporter],
-        tasks=[overview_task, metrics_summary_task, key_findings_task, recommendations_task, assemble_report_task],
+        tasks=[analysis_task, overview_task, metrics_summary_task, key_findings_task, recommendations_task, assemble_report_task],
         process=Process.sequential,
         verbose=True
     )
@@ -963,18 +876,16 @@ RAW TABLE TEXT:
         verbose=True
     )
 
-    for crew, name in [(data_crew, "data_crew"), (report_crew, "report_crew"), (viz_crew, "viz_crew")]:
+    for crew, name in [(report_crew, "report_crew"), (viz_crew, "viz_crew")]:
         for i, task in enumerate(crew.tasks):
             if not isinstance(task, Task):
                 logger.error(f"Invalid task in {name} at index {i}: {task}")
                 raise ValueError(f"Task in {name} is not a Task object")
             logger.info(f"{name} task {i} async_execution: {task.async_execution}")
 
-    return data_crew, report_crew, viz_crew
-
-
-
-
+    # The Data Architect/data_crew is removed since the data is already structured.
+    # If your pipeline downstream expects three return values, you can return None in place of data_crew:
+    return None, report_crew, viz_crew
 
 def clean_json_output(raw_output: str, fallback_versions: List[str]) -> dict:
     logger.info(f"Raw analysis output: {raw_output[:200]}...")
