@@ -887,10 +887,14 @@ def setup_crew(structured_json: dict, versions: list, llm=llm) -> tuple:
         description=f"""
 Given the following structured release metrics JSON (see 'metrics' key), for EACH metric and EACH version, add a 'Trend' key (→ for no change, ↑ for increase, ↓ for decrease) based on the value of 'Current Release RRR' (compare each version to the previous one). 
 
-- DO NOT change the structure or keys. 
+- DO NOT change the structure or keys.
 - Output the FULL JSON in the SAME NESTED FORMAT, with 'Trend' added to each row.
 - If a value is missing, use "" for 'Trend'.
-- NO summary, NO extra keys, NO markdown, just the corrected JSON.
+
+IMPORTANT OUTPUT RULES:
+- OUTPUT ONLY VALID JSON. DO NOT use markdown or wrap in ```json or ```
+- DO NOT add explanations, preambles, or comments. NO extra text, only the JSON object.
+- If you are unsure, just return the input unchanged.
 
 Example Input:
 {json.dumps(example_in, indent=2)}
@@ -989,6 +993,7 @@ Example:
     # The Data Architect/data_crew is removed since the data is already structured.
     # If your pipeline downstream expects three return values, you can return None in place of data_crew:
     return None, report_crew, viz_crew
+
 
 
 
