@@ -680,9 +680,15 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
         raw_output = "{}"  # Fallback to empty JSON string
     logger.info(f"Processing task output: {raw_output[:200]}...")
     data = clean_json_output(raw_output, fallback_versions)
+
+    # === NEW: FILTER LLM OUTPUT FOR ALLOWED METRICS & COLUMNS ===
+    data = filter_llm_metrics(data)
+    logger.info(f"Filtered metrics output: {json.dumps(data, indent=2)[:500]}")
+
     if not validate_metrics(data):
         logger.error(f"Validation failed for processed output: {json.dumps(data, indent=2)[:200]}...")
         raise ValueError("Invalid or incomplete metrics data")
+
     # Validate and correct trends
     for metric, metric_data in data['metrics'].items():
         if metric in EXPECTED_METRICS[:5]:  # ATLS/BTLS metrics
@@ -749,6 +755,7 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
                         else:
                             items[i]['trend'] = f"↓ ({abs(pct_change):.1f}%)"
     return data
+
 
 def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
     """
