@@ -29,7 +29,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from tenacity import retry, stop_after_attempt, wait_fixed
 from copy import deepcopy
-import pandas as pd 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -306,27 +305,31 @@ def get_pdf_files_from_folder(folder_path: str) -> List[str]:
    
     return pdf_files
 
-def extract_section_from_pdf(pdf_path, start_pattern, end_pattern):
+def extract_text_from_pdf(pdf_path: str) -> str:
     """
-    Extract the section between start and end headers from a PDF using pdfplumber.
+    Extracts text content from PDF file.
+    
+    Args:
+        pdf_path (str): Path to PDF file
+        
+    Returns:
+        str: Extracted text content
     """
-    import re
-    full_text = ""
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                full_text += page_text + "\n"
-    pattern = re.compile(
-        re.escape(start_pattern) + r"(.*?)" + re.escape(end_pattern),
-        re.DOTALL | re.IGNORECASE,
-    )
-    match = pattern.search(full_text)
-    if match:
-        return match.group(1).strip()
-    else:
-        logger.error("Section not found in: " + pdf_path)
-        return ""
+    try:
+        with open(pdf_path, 'rb') as file:
+            reader = PdfReader(file)
+            text = ''
+            for page in reader.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + '\n'
+            if not text.strip():
+                raise ValueError(f"No text extracted from {pdf_path}")
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text
+    except Exception as e:
+        logger.error(f"Error extracting text from {pdf_path}: {str(e)}")
+        raise
 
 def extract_hyperlinks_from_pdf(pdf_path: str) -> List[Dict[str, str]]:
     """
@@ -362,49 +365,31 @@ def extract_hyperlinks_from_pdf(pdf_path: str) -> List[Dict[str, str]]:
         logger.error(f"Error extracting hyperlinks from {pdf_path}: {str(e)}")
     return hyperlinks
 
-
-def parse_metrics_section(section_text, columns_of_interest, expected_metrics):
+def locate_table(text: str, start_header: str, end_header: str) -> str:
     """
-    Extracts required metrics and columns from the extracted text.
-    Only keeps ATLs if both ATLs and BTLs are present.
+    Locates and extracts table data between specified headers in text.
+    
+    Args:
+        text (str): Full text content
+        start_header (str): Starting header pattern
+        end_header (str): Ending header pattern
+        
+    Returns:
+        str: Extracted table text
+        
+    Raises:
+        ValueError: If headers not found or no data between headers
     """
-    rows = []
-    lines = section_text.split('\n')
-    i = 0
-    while i < len(lines):
-        for metric in expected_metrics:
-            if metric in lines[i]:
-                metric_row = {"Metrics": metric, "Release Criteria": "", "Current Release RRR": "", "Status": ""}
-                found_atls = False
-                for j in range(1, 6):
-                    if i+j >= len(lines):
-                        break
-                    l = lines[i+j]
-                    if "ATLS" in l:
-                        atls_line = re.sub(r"ATLS[:\-]*\s*", "", l, flags=re.IGNORECASE)
-                        parts = re.split(r'\s{2,}|\t+', atls_line.strip())
-                        if len(parts) >= 3:
-                            metric_row["Release Criteria"] = parts[0]
-                            metric_row["Current Release RRR"] = parts[1]
-                            metric_row["Status"] = parts[2]
-                        found_atls = True
-                        break
-                if not found_atls:
-                    for j in range(1, 6):
-                        if i+j < len(lines):
-                            fallback = lines[i+j].strip()
-                            if fallback and "BTL" not in fallback and "BTLs" not in fallback:
-                                parts = re.split(r'\s{2,}|\t+', fallback)
-                                if len(parts) >= 3:
-                                    metric_row["Release Criteria"] = parts[0]
-                                    metric_row["Current Release RRR"] = parts[1]
-                                    metric_row["Status"] = parts[2]
-                                break
-                rows.append(metric_row)
-                break
-        i += 1
-    df = pd.DataFrame(rows, columns=columns_of_interest)
-    return df
+    start_index = text.find(start_header)
+    end_index = text.find(end_header)
+    if start_index == -1:
+        raise ValueError(f'Header {start_header} not found in text')
+    if end_index == -1:
+        raise ValueError(f'Header {end_header} not found in text')
+    table_text = text[start_index:end_index].strip()
+    if not table_text:
+        raise ValueError(f"No metrics table data found between headers")
+    return table_text
 
 # def evaluate_with_llm_judge(source_text: str, generated_report: str) -> Tuple[int, str]:
 #     judge_llm = AzureChatOpenAI(
