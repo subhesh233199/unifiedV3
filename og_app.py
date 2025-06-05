@@ -139,124 +139,6 @@ class SharedState:
 
 shared_state = SharedState()
 
-def build_metrics_summary_from_json(metrics_json, versions):
-    """
-    Generate the Metrics Summary section (markdown tables) directly from metrics JSON.
-    """
-    lines = []
-    metrics = metrics_json['metrics']
-
-    # --- Open ALL RRR Defects ---
-    lines.append("### Open ALL RRR Defects (ATLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Open ALL RRR Defects']['ATLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    lines.append("\n### Open ALL RRR Defects (BTLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Open ALL RRR Defects']['BTLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Open Security Defects ---
-    lines.append("\n### Open Security Defects (ATLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Open Security Defects']['ATLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    lines.append("\n### Open Security Defects (BTLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Open Security Defects']['BTLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- All Open Defects (T-1) ---
-    lines.append("\n### All Open Defects (T-1) (ATLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['All Open Defects (T-1)']['ATLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    lines.append("\n### All Open Defects (T-1) (BTLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['All Open Defects (T-1)']['BTLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- All Security Open Defects ---
-    lines.append("\n### All Security Open Defects (ATLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['All Security Open Defects']['ATLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    lines.append("\n### All Security Open Defects (BTLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['All Security Open Defects']['BTLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Customer Specific Testing (UAT) ---
-    lines.append("\n### Customer Specific Testing (UAT)\n")
-    for client in ['RBS', 'Tesco', 'Belk']:
-        lines.append(f"#### {client}")
-        lines.append("| Release | Pass Count | Fail Count | Pass Rate (%) | Trend | Status |")
-        lines.append("|---------|------------|------------|---------------|-------|--------|")
-        for item in metrics['Customer Specific Testing (UAT)'][client]:
-            lines.append(f"| {item['version']} | {item['pass_count']} | {item['fail_count']} | {item.get('pass_rate','')} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Load/Performance ---
-    lines.append("\n### Load/Performance (ATLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Load/Performance']['ATLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    lines.append("\n### Load/Performance (BTLS)\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Load/Performance']['BTLS']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- E2E Test Coverage ---
-    lines.append("\n### E2E Test Coverage\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['E2E Test Coverage']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Automation Test Coverage ---
-    lines.append("\n### Automation Test Coverage\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Automation Test Coverage']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Unit Test Coverage ---
-    lines.append("\n### Unit Test Coverage\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Unit Test Coverage']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Defect Closure Rate ---
-    lines.append("\n### Defect Closure Rate\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Defect Closure Rate']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    # --- Regression Issues ---
-    lines.append("\n### Regression Issues\n")
-    lines.append("| Release | Value | Trend | Status |")
-    lines.append("|---------|-------|-------|--------|")
-    for item in metrics['Regression Issues']:
-        lines.append(f"| {item['version']} | {item['value']} | {item.get('trend','')} | {item['status']} |")
-
-    return "\n".join(lines)
-
 # SQLite database setup
 def init_cache_db():
     """
@@ -859,8 +741,18 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
 
 def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
     """
-    Sets up the AI crew system for analysis with maximum guardrails for robust JSON extraction.
-
+    Sets up the AI crew system for analysis.
+    
+    Creates three specialized crews:
+    1. Data Crew: Structures raw data into JSON format
+    2. Report Crew: Generates comprehensive analysis reports
+    3. Visualization Crew: Creates data visualizations
+    
+    Args:
+        extracted_text (str): Text extracted from PDFs
+        versions (List[str]): List of release versions to analyze
+        llm: Language model instance
+        
     Returns:
         tuple: (data_crew, report_crew, viz_crew)
     """
@@ -873,7 +765,7 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
-    # Ensure we have at least 2 versions for comparison
+    # Ensure we have at least 2 versions for comparison; repeat the last one if needed
     if len(versions) < 2:
         raise ValueError("At least two versions are required for analysis")
     versions_for_example = versions[:3] if len(versions) >= 3 else versions + [versions[-1]] * (3 - len(versions))
@@ -883,15 +775,15 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
 {extracted_text}
 
 RULES:
-1. Output MUST be valid JSON only.
+1. Output MUST be valid JSON only
 2. Use this EXACT structure:
 {{
     "metrics": {{
-        "Open ALL RRR Defects": {{"ATLS": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...], "BTLS": [...] }},
-        "Open Security Defects": {{"ATLS": [...], "BTLS": [...] }},
-        "All Open Defects (T-1)": {{"ATLS": [...], "BTLS": [...] }},
-        "All Security Open Defects": {{"ATLS": [...], "BTLS": [...] }},
-        "Load/Performance": {{"ATLS": [...], "BTLS": [...] }},
+        "Open ALL RRR Defects": {{"ATLS": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...], "BTLS": [...]}},
+        "Open Security Defects": {{"ATLS": [...], "BTLS": [...]}},
+        "All Open Defects (T-1)": {{"ATLS": [...], "BTLS": [...]}},
+        "All Security Open Defects": {{"ATLS": [...], "BTLS": [...]}},
+        "Load/Performance": {{"ATLS": [...], "BTLS": [...]}},
         "E2E Test Coverage": [{{"version": "{versions[0]}", "value": N, "status": "TEXT"}}, ...],
         "Automation Test Coverage": [...],
         "Unit Test Coverage": [...],
@@ -904,22 +796,21 @@ RULES:
         }}
     }}
 }}
-3. **NO HALLUCINATED or INVENTED VALUES.** If a value cannot be confidently extracted or is missing, set "value": 0 and "status": "NEEDS REVIEW". For UAT, set both "pass_count" and "fail_count" to 0 and "status": "NEEDS REVIEW".
-4. **ALWAYS include ALL required metrics:** {', '.join(EXPECTED_METRICS)}
-5. **ALWAYS include ALL provided versions:** {', '.join(f'"{v}"' for v in versions)}
-6. For UAT, pass_count and fail_count must be non-negative integers. If unclear, set both to 0 and status to "NEEDS REVIEW".
-7. For other metrics, values must be positive numbers or 0. If unclear, set value to 0 and status to "NEEDS REVIEW".
-8. Status must be one of: "ON TRACK", "MEDIUM RISK", "RISK", "NEEDS REVIEW".
-9. **Never omit any field or metric, even if the source is unclear.** Fill with placeholder values as above.
-10. **NO TEXT outside JSON, NO trailing commas, NO comments.**
-11. **Validate JSON syntax before output.**
+3. Include ALL metrics: {', '.join(EXPECTED_METRICS)}
+4. Use versions {', '.join(f'"{v}"' for v in versions)}
+5. For UAT, pass_count and fail_count must be non-negative integers, at least one non-zero per client
+6. For other metrics, values must be positive numbers (at least one non-zero per metric)
+7. Status must be one of: "ON TRACK", "MEDIUM RISK", "RISK", "NEEDS REVIEW"
+8. Ensure at least 2 items per metric/sub-metric, matching the provided versions
+9. No text outside JSON, no trailing commas, no comments
+10. Validate JSON syntax before output
 EXAMPLE:
 {{
     "metrics": {{
         "Open ALL RRR Defects": {{
             "ATLS": [
                 {{"version": "{versions_for_example[0]}", "value": 10, "status": "RISK"}},
-                {{"version": "{versions_for_example[1]}", "value": 0, "status": "NEEDS REVIEW"}},
+                {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK"}},
                 {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK"}}
             ],
             "BTLS": [
@@ -930,16 +821,24 @@ EXAMPLE:
         }},
         "Customer Specific Testing (UAT)": {{
             "RBS": [
-                {{"version": "{versions_for_example[0]}", "pass_count": 0, "fail_count": 0, "status": "NEEDS REVIEW"}},
+                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK"}},
                 {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK"}},
                 {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK"}}
             ],
-            ...
+            "Tesco": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK"}}
+            ],
+            "Belk": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK"}}
+            ]
         }},
         ...
     }}
-}}
-""",
+}}""",
         agent=structurer,
         async_execution=False,
         expected_output="Valid JSON string with no extra text",
@@ -1001,6 +900,23 @@ EXAMPLE INPUT:
                 {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK"}}
             ]
         }},
+        "Customer Specific Testing (UAT)": {{
+            "RBS": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK"}}
+            ],
+            "Tesco": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK"}}
+            ],
+            "Belk": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK"}}
+            ]
+        }},
         ...
     }}
 }}
@@ -1013,7 +929,28 @@ EXAMPLE OUTPUT:
                 {{"version": "{versions_for_example[1]}", "value": 8, "status": "MEDIUM RISK", "trend": "↓ (20.0%)"}},
                 {{"version": "{versions_for_example[2]}", "value": 5, "status": "ON TRACK", "trend": "↓ (37.5%)"}}
             ],
-            ...
+            "BTLS": [
+                {{"version": "{versions_for_example[0]}", "value": 12, "status": "RISK", "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "value": 9, "status": "MEDIUM RISK", "trend": "↓ (25.0%)"}},
+                {{"version": "{versions_for_example[2]}", "value": 6, "status": "ON TRACK", "trend": "↓ (33.3%)"}}
+            ]
+        }},
+        "Customer Specific Testing (UAT)": {{
+            "RBS": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 50, "fail_count": 5, "status": "ON TRACK", "pass_rate": 90.9, "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 48, "fail_count": 6, "status": "MEDIUM RISK", "pass_rate": 88.9, "trend": "↓ (2.0%)"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 52, "fail_count": 4, "status": "ON TRACK", "pass_rate": 92.9, "trend": "↑ (4.0%)"}}
+            ],
+            "Tesco": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 45, "fail_count": 3, "status": "ON TRACK", "pass_rate": 93.8, "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 46, "fail_count": 2, "status": "ON TRACK", "pass_rate": 95.8, "trend": "↑ (2.0%)"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 47, "fail_count": 1, "status": "ON TRACK", "pass_rate": 97.9, "trend": "↑ (2.1%)"}}
+            ],
+            "Belk": [
+                {{"version": "{versions_for_example[0]}", "pass_count": 40, "fail_count": 7, "status": "MEDIUM RISK", "pass_rate": 85.1, "trend": "→"}},
+                {{"version": "{versions_for_example[1]}", "pass_count": 42, "fail_count": 5, "status": "ON TRACK", "pass_rate": 89.4, "trend": "↑ (4.3%)"}},
+                {{"version": "{versions_for_example[2]}", "pass_count": 43, "fail_count": 4, "status": "ON TRACK", "pass_rate": 91.5, "trend": "↑ (2.1%)"}}
+            ]
         }},
         ...
     }}
@@ -1234,7 +1171,6 @@ Do NOT alter content. Just combine with correct formatting.""",
             logger.info(f"{name} task {i} async_execution: {task.async_execution}")
 
     return data_crew, report_crew, viz_crew
-
 
 def clean_json_output(raw_output: str, fallback_versions: List[str]) -> dict:
     logger.info(f"Raw analysis output: {raw_output[:200]}...")
@@ -1581,18 +1517,6 @@ def run_fallback_visualization(metrics: Dict[str, Any]):
         finally:
             plt.close('all')
 
-import re
-
-def extract_section_from_report(report: str, section: str) -> str:
-    """
-    Extracts the content of a markdown section, up to the next '##' or end of string.
-    """
-    pattern = rf"^## {re.escape(section)}\s*(.*?)(?=^## |\Z)"
-    match = re.search(pattern, report, re.DOTALL | re.MULTILINE)
-    if match:
-        return match.group(1).strip()
-    return ""
-
 async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     folder_path = convert_windows_path(request.folder_path)
     folder_path = os.path.normpath(folder_path)
@@ -1606,6 +1530,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     # Extract versions from PDF filenames
     versions = []
     for pdf_path in pdf_files:
+        # New pattern to match "Workcloud Task Management XX.XX" format
         match = re.search(r'(\d+\.\d+)(?:\s|\.)', os.path.basename(pdf_path))
         if match:
             versions.append(match.group(1))
@@ -1687,35 +1612,8 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
 
     metrics = shared_state.metrics
 
-    # --- MAIN CHANGE STARTS HERE ---
-
-    # Extract all sections from the LLM markdown
-    llm_report = report_crew.tasks[-1].output.raw
-    overview_md = extract_section_from_report(llm_report, "Overview")
-    key_findings_md = extract_section_from_report(llm_report, "Key Findings")
-    recommendations_md = extract_section_from_report(llm_report, "Recommendations")
-
-    # NEW: Build the metrics summary section from JSON, not from the LLM report
-    metrics_summary_md = build_metrics_summary_from_json(metrics, versions)
-
-    # Assemble the enhanced report using the above sections
-    enhanced_report = (
-        "# Software Metrics Report\n\n"
-        "## Overview\n"
-        f"{overview_md}\n\n"
-        "---\n"
-        "## Metrics Summary\n"
-        f"{metrics_summary_md}\n\n"
-        "---\n"
-        "## Key Findings\n"
-        f"{key_findings_md}\n\n"
-        "---\n"
-        "## Recommendations\n"
-        f"{recommendations_md}\n"
-    )
-
-    # --- MAIN CHANGE ENDS HERE ---
-
+    # Get report from assemble_report_task
+    enhanced_report = enhance_report_markdown(report_crew.tasks[-1].output.raw)
     if not validate_report(enhanced_report):
         logger.error("Report missing required sections")
         raise HTTPException(status_code=500, detail="Generated report is incomplete")
@@ -1770,6 +1668,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
                     detail=f"Failed to generate minimum required visualizations: got {len(viz_base64)}, need at least {min_visualizations}"
                 )
 
+    # **MAIN FIX: just these two lines changed below**
     evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
 
     return AnalysisResponse(
