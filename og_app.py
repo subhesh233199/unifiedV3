@@ -1235,10 +1235,10 @@ def run_fallback_visualization(metrics: Dict[str, Any]):
 async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     folder_path = convert_windows_path(request.folder_path)
     folder_path = os.path.normpath(folder_path)
-   
+
     if not os.path.exists(folder_path):
         raise HTTPException(status_code=400, detail=f"Folder path does not exist: {folder_path}")
-   
+
     pdf_files = get_pdf_files_from_folder(folder_path)
     logger.info(f"Processing {len(pdf_files)} PDF files")
 
@@ -1268,7 +1268,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         }
         # Hyperlink extraction (unchanged)
         hyperlink_futures = {executor.submit(extract_hyperlinks_from_pdf, pdf): pdf for pdf in pdf_files}
-       
+        
         for future in as_completed(section_futures):
             pdf = section_futures[future]
             try:
@@ -1280,7 +1280,7 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
             except Exception as e:
                 logger.error(f"Failed to extract section from {pdf}: {str(e)}")
                 continue
-       
+
         for future in as_completed(hyperlink_futures):
             pdf = hyperlink_futures[future]
             try:
@@ -1293,40 +1293,22 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         raise HTTPException(status_code=400, detail="No valid text extracted from PDFs")
 
     # ---- Structure and filter section_texts for ATLs only, expected metrics only ----
-    # Optionally: structure each extracted section as a DataFrame
-    # structured_tables = []
-    # for name, section_text in extracted_texts:
-    #     df = parse_metrics_section(section_text, COLUMNS_OF_INTEREST, EXPECTED_METRICS)
-    #     structured_tables.append((name, df))
-    # You can use structured_tables for more advanced analytics/reporting
+    all_structured_rows = []
+    for name, section_text in extracted_texts:
+        df = parse_metrics_section(section_text, COLUMNS_OF_INTEREST, EXPECTED_METRICS)
+        # Optionally, add version info per row:
+        for row in df.to_dict(orient="records"):
+            row["Version"] = name
+            all_structured_rows.append(row)
+    structured_json = {"metrics": all_structured_rows}
 
-    # For the current pipeline, concatenate the extracted text for agent input
-    full_source_text = "\n".join(
-        f"File: {name}\n{text}" for name, text in extracted_texts
-    )
+    # For agent context and debugging (optional, not needed downstream):
+    # print(json.dumps(structured_json, indent=2))
 
-    # Get sub-crews
-    data_crew, report_crew, viz_crew = setup_crew(full_source_text, versions, llm)
+    # Get sub-crews (the first "data_crew" is None in this pipeline)
+    data_crew, report_crew, viz_crew = setup_crew(structured_json, versions, llm)
    
-    # Run crews sequentially and in parallel
-    logger.info("Starting data_crew")
-    await data_crew.kickoff_async()
-    logger.info("Data_crew completed")
-   
-    # Validate task outputs
-    for i, task in enumerate(data_crew.tasks):
-        if not hasattr(task, 'output') or not hasattr(task.output, 'raw'):
-            logger.error(f"Invalid output for data_crew task {i}: {task}")
-            raise ValueError(f"Data crew task {i} did not produce a valid output")
-        logger.info(f"Data_crew task {i} output: {task.output.raw[:200]}...")
-
-    # Validate metrics
-    if not shared_state.metrics or not isinstance(shared_state.metrics, dict):
-        logger.error(f"Invalid metrics in shared_state: type={type(shared_state.metrics)}, value={shared_state.metrics}")
-        raise HTTPException(status_code=500, detail="Failed to generate valid metrics data")
-    logger.info(f"Metrics after data_crew: {json.dumps(shared_state.metrics, indent=2)[:200]}...")
-
-    # Run report_crew and viz_crew in parallel
+    # Run report_crew and viz_crew in parallel (no data_crew step)
     logger.info("Starting report_crew and viz_crew")
     await asyncio.gather(
         report_crew.kickoff_async(),
@@ -1404,8 +1386,8 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
                     detail=f"Failed to generate minimum required visualizations: got {len(viz_base64)}, need at least {min_visualizations}"
                 )
 
-    # **MAIN FIX: just these two lines changed below**
-    evaluation = evaluate_with_llm_judge(full_source_text, enhanced_report)
+    # For evaluation, use the enhanced_report and the metrics summary
+    evaluation = evaluate_with_llm_judge(json.dumps(structured_json), enhanced_report)
 
     return AnalysisResponse(
         metrics=metrics,
@@ -1414,8 +1396,6 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
         evaluation=evaluation,
         hyperlinks=all_hyperlinks
     )
-
-
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_pdfs(request: FolderPathRequest):
