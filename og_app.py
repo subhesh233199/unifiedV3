@@ -820,9 +820,7 @@ def process_task_output(raw_output: str, fallback_versions: List[str]) -> Dict:
 def setup_crew(structured_json: dict, versions: list, llm=llm) -> tuple:
     """
     Sets up the AI crew system for analysis.
-
     Now expects already structured JSON, so LLM is NOT required to extract/structure metrics.
-
     Returns:
         tuple: (report_crew, viz_crew)
     """
@@ -845,22 +843,68 @@ def setup_crew(structured_json: dict, versions: list, llm=llm) -> tuple:
         memory=True,
     )
 
-    # Dummy data-input task to hold structured JSON for context
-    data_input_task = Task(
-        description="Pre-structured JSON metrics as extracted from the PDFs. Use as input.",
-        expected_output="Valid JSON object containing metrics data.",
-        agent=None,  # No agent; acts as a data holder
-        async_execution=False,
-        output=structured_json
-    )
+    # Example for LLM to avoid any hallucinated keys!
+    example_in = {
+        "metrics": {
+            "Example Metric": [
+                {
+                    "Version": "25.1",
+                    "Release Criteria": "90%",
+                    "Current Release RRR": "85",
+                    "Status": "ON TRACK"
+                },
+                {
+                    "Version": "25.2",
+                    "Release Criteria": "90%",
+                    "Current Release RRR": "90",
+                    "Status": "ON TRACK"
+                }
+            ]
+        }
+    }
+    example_out = {
+        "metrics": {
+            "Example Metric": [
+                {
+                    "Version": "25.1",
+                    "Release Criteria": "90%",
+                    "Current Release RRR": "85",
+                    "Status": "ON TRACK",
+                    "Trend": "→"
+                },
+                {
+                    "Version": "25.2",
+                    "Release Criteria": "90%",
+                    "Current Release RRR": "90",
+                    "Status": "ON TRACK",
+                    "Trend": "↑"
+                }
+            ]
+        }
+    }
 
-    # Now the analysis task references the data_input_task as context
     analysis_task = Task(
-        description="Given the metrics JSON from context[0], perform trend analysis for each metric across all releases. Summarize changes, risks, and improvements in a way a software quality leader would value. Output valid JSON with trend/observation per metric.",
+        description=f"""
+Given the following structured release metrics JSON (see 'metrics' key), for EACH metric and EACH version, add a 'Trend' key (→ for no change, ↑ for increase, ↓ for decrease) based on the value of 'Current Release RRR' (compare each version to the previous one). 
+
+- DO NOT change the structure or keys. 
+- Output the FULL JSON in the SAME NESTED FORMAT, with 'Trend' added to each row.
+- If a value is missing, use "" for 'Trend'.
+- NO summary, NO extra keys, NO markdown, just the corrected JSON.
+
+Example Input:
+{json.dumps(example_in, indent=2)}
+
+Example Output:
+{json.dumps(example_out, indent=2)}
+
+Metrics JSON to analyze:
+{json.dumps(structured_json, indent=2)}
+""",
         agent=reporter,
         async_execution=False,
-        expected_output="Valid JSON string with trend/observation per metric",
-        context=[data_input_task],
+        expected_output="Valid JSON string in the same structure as the input, but with a 'Trend' key added to each metric entry.",
+        context=[],  # No prior context, raw data provided here!
         callback=lambda output: (
             logger.info(f"Analysis task output type: {type(output.raw)}, content: {output.raw if isinstance(output.raw, str) else output.raw}"),
             setattr(shared_state, 'metrics', process_task_output(output.raw, versions))
@@ -945,6 +989,9 @@ Example:
     # The Data Architect/data_crew is removed since the data is already structured.
     # If your pipeline downstream expects three return values, you can return None in place of data_crew:
     return None, report_crew, viz_crew
+
+
+
 
 
 def add_trends_to_metrics(structured_json):
