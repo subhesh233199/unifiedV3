@@ -795,6 +795,16 @@ def setup_crew(extracted_text: str, versions: List[str], llm=llm) -> tuple:
         memory=True,
     )
 
+    # === MISSING ANALYST AGENT (ADD THIS!) ===
+    analyst = Agent(
+        role="Trend Analyst",
+        goal="Add accurate trends to metrics data and maintain valid JSON",
+        backstory="Data scientist specializing in metric analysis",
+        llm=llm,
+        verbose=True,
+        memory=True,
+    )
+
     # Ensure at least 2 versions for context
     if len(versions) < 2:
         raise ValueError("At least two versions are required for analysis")
@@ -841,10 +851,7 @@ RAW TABLE TEXT:
         )
     )
 
-    # === All your existing analyst, analysis_task, visualizer, visualization_task, reporter, report tasks... ===
-    # [Paste those unchanged from your current file.]
-
-    # ... (Rest of setup_crew function remains the same; no change to report_crew or viz_crew setup) ...
+    # === Your existing analysis_task, reporter, visualizer, etc. go here (unchanged) ===
 
     data_crew = Crew(
         agents=[structurer, analyst],
@@ -875,6 +882,7 @@ RAW TABLE TEXT:
             logger.info(f"{name} task {i} async_execution: {task.async_execution}")
 
     return data_crew, report_crew, viz_crew
+
 
 
 def clean_json_output(raw_output: str, fallback_versions: List[str]) -> dict:
