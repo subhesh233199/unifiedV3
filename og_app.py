@@ -828,7 +828,16 @@ def setup_crew(structured_json: dict, versions: List[str], llm=llm) -> tuple:
     )
 
     metrics_summary_task = Task(
-        description="Write a detailed Markdown section with the metrics summary as tables for each metric, using the analyzed structured metrics.",
+        description="""For each metric in the provided 'metrics' JSON object, create a markdown table comparing all available versions. "
+        "Each table should have columns: Version, Release Criteria, Current Release RRR, Status. "
+        "Below each table, briefly comment on any major differences or trends. "
+        "Example:\n\n"
+        "#### Open ALL RRR Defects (Current Release)\n"
+        "| Version | Release Criteria | Current Release RRR | Status |\n"
+        "|---------|-----------------|---------------------|--------|\n"
+        "| 25.1    | ...             | ...                 | ...    |\n"
+        "| 25.2    | ...             | ...                 | ...    |\n"
+        "| 25.3    | ...             | ...                 | ...    |\n"""",
         agent=reporter,
         context=[analysis_task],
         expected_output="Markdown string"
@@ -1296,11 +1305,19 @@ async def run_full_analysis(request: FolderPathRequest) -> AnalysisResponse:
     all_structured_rows = []
     for name, section_text in extracted_texts:
         df = parse_metrics_section(section_text, COLUMNS_OF_INTEREST, EXPECTED_METRICS)
-        # Optionally, add version info per row:
         for row in df.to_dict(orient="records"):
             row["Version"] = name
             all_structured_rows.append(row)
-    structured_json = {"metrics": all_structured_rows}
+    
+    # Group rows by metric name
+    grouped = {}
+    for row in all_structured_rows:
+        metric = row["Metrics"]
+        row_copy = row.copy()
+        row_copy.pop("Metrics", None)  # Don't need redundant column in each row
+        grouped.setdefault(metric, []).append(row_copy)
+    structured_json = {"metrics": grouped}
+
 
     # For agent context and debugging (optional, not needed downstream):
     # print(json.dumps(structured_json, indent=2))
