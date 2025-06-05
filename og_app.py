@@ -140,6 +140,14 @@ class SharedState:
         self.visualization_ready = False
         self.viz_lock = Lock()
 
+def filter_llm_metrics(llm_json: dict) -> dict:
+    allowed_metrics = set(EXPECTED_METRICS)
+    allowed_columns = COLUMNS_OF_INTEREST
+    filtered = []
+    for row in llm_json.get('metrics', []):
+        if row.get('Metrics') in allowed_metrics:
+            filtered.append({col: row.get(col, "") for col in allowed_columns})
+    return {"metrics": filtered}
 shared_state = SharedState()
 
 # SQLite database setup
